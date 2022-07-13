@@ -18,9 +18,5 @@
         <DebugType>none</DebugType>
     </PropertyGroup>
 
-    <ItemGroup>
-      <Content Include=".github\workflows\build.yml" />
-    </ItemGroup>
-    
     <Import Project="..\btd6.targets" />
 </Project>
