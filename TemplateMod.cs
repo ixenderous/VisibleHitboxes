@@ -1,6 +1,4 @@
-﻿global using MelonLoader;
-global using BTD_Mod_Helper.Extensions;
-global using System.Linq;
+﻿using MelonLoader;
 using BTD_Mod_Helper;
 using TemplateMod;
 

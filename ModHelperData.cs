@@ -3,7 +3,7 @@
 public static class ModHelperData
 {
     public const string Version = "1.0.0";
-    public const string Name = "TemplateMod";
+    public const string Name = "Template Mod";
 
     public const string Description = "An empty mod";
 
