@@ -9,7 +9,7 @@ on:
 
 env:
   PROJECT_NAME: TemplateMod
-  # MOD_HELPER_BRANCH: 3.0_Features
+  MOD_HELPER_BRANCH: master
   MELONLOADER_BRANCH: alpha-development
   
   MOD_HELPER_NAME: Btd6ModHelper
@@ -66,7 +66,7 @@ jobs:
 
       - name: Download Latest Mod Helper
         uses: robinraju/release-downloader@v1.4
-        if: env.MOD_HELPER_BRANCH == ''
+        if: env.MOD_HELPER_BRANCH == 'master'
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           repository: gurrenm3/BTD-Mod-Helper
@@ -79,7 +79,7 @@ jobs:
 
       - name: Download Specific Mod Helper
         uses: dawidd6/action-download-artifact@v2
-        if: env.MOD_HELPER_BRANCH != ''
+        if: env.MOD_HELPER_BRANCH != 'master'
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           workflow: build.yml
