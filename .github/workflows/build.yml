@@ -2,13 +2,14 @@ name: Build
 
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - '*'
     tags:
       - '*'
 
 env:
   PROJECT_NAME: TemplateMod
-  MOD_HELPER_BRANCH: 3.0_Features
+  # MOD_HELPER_BRANCH: 3.0_Features
   MELONLOADER_BRANCH: alpha-development
   
   MOD_HELPER_NAME: Btd6ModHelper
