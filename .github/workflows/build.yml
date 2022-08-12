@@ -65,7 +65,7 @@ jobs:
 
 
       - name: Download Latest Mod Helper
-        uses: dsaltares/fetch-gh-release-asset@master
+        uses: robinraju/release-downloader@v1.4
         if: env.MOD_HELPER_BRANCH == ''
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
