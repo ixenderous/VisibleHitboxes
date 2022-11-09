@@ -4,7 +4,6 @@
         <RootNamespace>HitboxMod</RootNamespace>
         <Configurations>Debug;Release</Configurations>
         <Nullable>enable</Nullable>
-        <AssemblyName>TemplateMod</AssemblyName>
         <LangVersion>latest</LangVersion>
     </PropertyGroup>
     
