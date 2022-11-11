@@ -9,6 +9,8 @@ using Il2CppSystem.Collections.Generic;
 using MelonLoader;
 using UnityEngine;
 using Main = HitboxMod.Main;
+using Object = Il2CppSystem.Object;
+
 // ReSharper disable MemberCanBePrivate.Global
 
 [assembly: MelonInfo(typeof(Main), ModHelperData.Name, ModHelperData.Version, ModHelperData.RepoOwner)]
@@ -80,13 +82,22 @@ public class Main : BloonsTD6Mod
         base.OnUpdate();
         if (!_isInGame) return;
         
-        foreach (var tower in InGame.instance.bridge.GetAllTowers())
+        foreach (var tower in InGame.Bridge.GetAllTowers())
         {
             if (tower.GetSimTower().GetUnityDisplayNode() == null) continue;
             var simDisplay = tower.GetSimTower().GetUnityDisplayNode().gameObject.transform;
             var footprint = tower.Def.footprint;
             var color = new Color(1f,1f,1f);
-            CreateHitbox(simDisplay, footprint, color);
+            CreateTowerHitbox(simDisplay, color, footprint);
+        }
+
+        foreach (var projectile in InGame.Bridge.GetAllProjectiles())
+        {
+            if (projectile.GetUnityDisplayNode() == null) continue;
+            var simDisplay = projectile.GetUnityDisplayNode().gameObject.transform;
+            var radius = projectile.radius;
+            var color = new Color(1f, 0f, 0f);
+            CreateSphericalHitbox(simDisplay, color, radius);
         }
     }
 
@@ -95,8 +106,31 @@ public class Main : BloonsTD6Mod
         var bundle = ModContent.GetBundle(ModHelper.GetMod("HitboxMod"), "debugmat");
         return bundle.LoadAsset("DebugMat").Cast<Material>();
     }
+    
+    private static void CreateSphericalHitbox(Transform simDisplay, Color color, float radius)
+    {
+        foreach(var gameobject in GetAllChilds(simDisplay.gameObject))
+        {
+            if (gameobject.name is "Sphere")
+            {
+                return;
+            }
+        }
 
-    private static void CreateHitbox(Transform simDisplay, FootprintModel footprint, Color color)
+        var mat = GetTransparentOutlineMaterial().Duplicate();
+        mat.color = color;
+        var height = HHeight;
+        
+        const int sizeMult = 2; // The primitive circle has 0.5 units of radius for some reason
+        var sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        
+        if (!_flatHitbox) height = radius;
+        sphere.transform.parent = simDisplay;
+        sphere.transform.localPosition = Vector3.zero;
+        sphere.transform.localScale = new Vector3(radius*sizeMult, height*sizeMult, radius*sizeMult);
+        sphere.GetComponent<MeshRenderer>().material = mat;
+    }
+    private static void CreateTowerHitbox(Transform simDisplay, Color color, Object footprint)
     {
         foreach(var gameobject in GetAllChilds(simDisplay.gameObject))
         {
@@ -105,14 +139,10 @@ public class Main : BloonsTD6Mod
                 return;
             }
         }
-        
-        if (footprint == null) throw new ArgumentNullException(nameof(footprint));
 
-        var mat = GetTransparentOutlineMaterial();
+        var mat = GetTransparentOutlineMaterial().Duplicate();
         mat.color = color;
-
         var height = HHeight;
-
         var sizeMult = 1/simDisplay.localScale.x;
 
         if (footprint.IsType<RectangleFootprintModel>())
