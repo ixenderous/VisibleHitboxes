@@ -225,10 +225,11 @@ public class Main : BloonsTD6Mod
             {
                 var placementDisplay = placementDisplayList.First();
                 var simDisplay = placementDisplay.gameObject.transform;
+                var simDisplayPosition = simDisplay.position;
+                var towerPos = new Vector2(simDisplayPosition.x, -simDisplayPosition.z);
                 var footprint = placementModel.footprint;
-                var mousePos = inputManager.cursorPositionWorld;
                 var inputId = InGame.Bridge.GetInputId();
-                var canPlace = InGame.Bridge.CanPlaceTowerAt(mousePos, placementModel, inputId, placementTowerId);
+                var canPlace = InGame.Bridge.CanPlaceTowerAt(towerPos, placementModel, inputId, placementTowerId);
                 var color = canPlace ? TowerColor : InvalidPositionColor;
                 activeIdentifiers.Add(-1);
                 CreateTowerHitbox(simDisplay, color, footprint, "-1");
