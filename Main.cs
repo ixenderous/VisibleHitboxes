@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Linq;
 using Assets.Scripts.Models.Towers.Behaviors;
 using Assets.Scripts.Unity;
@@ -11,6 +12,8 @@ using BTD_Mod_Helper.Extensions;
 using HitboxMod;
 using Il2CppSystem.Collections.Generic;
 using MelonLoader;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using UnityEngine;
 using Main = HitboxMod.Main;
 using Object = Il2CppSystem.Object;
@@ -27,7 +30,7 @@ public class Main : BloonsTD6Mod
     private bool _isInGame;
     
     private static MelonLogger.Instance _mllog = null!;
-
+    
     private static bool _isAllEnabled = true;
     private static bool _areTowersEnabled = true;
     private static bool _areProjectilesEnabled = true;
@@ -39,6 +42,8 @@ public class Main : BloonsTD6Mod
     private const float CircleSizeMultiplier = 2f;
     private const float DefaultTransparency = 0.5f;
     private const string HitboxObjectName = "Hitbox_";
+    
+    private static string _saveFileLocation = "";
 
     private static readonly Color TowerColor = new(1f, 1f, 0.85f);
     private static readonly Color ProjectileColor = new(1f, 0f, 0f);
@@ -52,7 +57,7 @@ public class Main : BloonsTD6Mod
     {
         collapsed = false
     };
-    
+
     public static readonly ModSettingHotkey ToggleAll = new(KeyCode.A, HotkeyModifier.Shift)
     {
         category = Hotkeys,
@@ -93,6 +98,7 @@ public class Main : BloonsTD6Mod
     {
         base.OnMatchStart();
         _isInGame = true;
+        LoadSaveFile();
     }
 
     public override void OnMatchEnd()
@@ -147,6 +153,82 @@ public class Main : BloonsTD6Mod
         return _areTowersEnabled && _areProjectilesEnabled && _areBloonsEnabled && _isMapEnabled;
     }
 
+    private static void LoadSaveFile()
+    {
+        try
+        {
+            if (_saveFileLocation == "")
+            {
+                const string folder = "\\BloonsTD6 Mod Helper\\Mod Saves";
+                _saveFileLocation = Directory.GetParent(System.Reflection.Assembly.GetExecutingAssembly().Location)?.FullName + folder;
+                Directory.CreateDirectory(_saveFileLocation);
+            }
+            const string saveFile = "HitboxMod.json";
+            
+            var fileName = _saveFileLocation + "\\" + saveFile;
+            
+            if (!File.Exists(fileName)) return;
+            var json = JObject.Parse(File.ReadAllText(fileName));
+            foreach (var (name, token) in json)
+            {
+                if (token == null) continue;
+                
+                switch (name)
+                {
+                    case "IsAllEnabled":
+                        _isAllEnabled = bool.Parse(token.ToString());
+                        break;
+                    case "AreTowersEnabled":
+                        _areTowersEnabled = bool.Parse(token.ToString());
+                        break;
+                    case "AreProjectilesEnabled":
+                        _areProjectilesEnabled = bool.Parse(token.ToString());
+                        break;
+                    case "AreBloonsEnabled":
+                        _areBloonsEnabled = bool.Parse(token.ToString());
+                        break;
+                    case "IsMapEnabled":
+                        _isMapEnabled = bool.Parse(token.ToString());
+                        break;
+                    case "AreHitboxesTransparent":
+                        _areHitboxesTransparent = bool.Parse(token.ToString());
+                        break;
+                    case "Transparency":
+                        _transparency = float.Parse(token.ToString());
+                        break;
+                }
+            }
+        }
+        catch (Exception e)
+        {
+            Log(e, MessageType.Error);
+        }
+    }
+
+    private static void UpdateSaveFile()
+    {
+        if (_saveFileLocation == "")
+        {
+            const string folder = "\\BloonsTD6 Mod Helper\\Mod Saves";
+            _saveFileLocation = Directory.GetParent(System.Reflection.Assembly.GetExecutingAssembly().Location)?.FullName + folder;
+            Directory.CreateDirectory(_saveFileLocation);
+        }
+        const string saveFile = "HitboxMod.json";
+        
+        var json = new JObject
+        {
+            ["IsAllEnabled"] = _isAllEnabled,
+            ["AreTowersEnabled"] = _areTowersEnabled,
+            ["AreProjectilesEnabled"] = _areProjectilesEnabled,
+            ["AreBloonsEnabled"] = _areBloonsEnabled,
+            ["IsMapEnabled"] = _isMapEnabled,
+            ["AreHitboxesTransparent"] = _areHitboxesTransparent,
+            ["Transparency"] = _transparency
+        };
+        
+        File.WriteAllText(_saveFileLocation + "\\" + saveFile, json.ToString(Formatting.Indented));
+    }
+
     public override void OnUpdate()
     {
         base.OnUpdate();
@@ -174,36 +256,46 @@ public class Main : BloonsTD6Mod
                 _isMapEnabled = true;
                 _isAllEnabled = true;
             }
+            _isAllEnabled = IsAllEnabled();
+            UpdateSaveFile();
         }
 
         if (ToggleTowers.JustPressed())
         {
             _areTowersEnabled = !_areTowersEnabled;
+            _isAllEnabled = IsAllEnabled();
+            UpdateSaveFile();
         }
 
         if (ToggleProjectiles.JustPressed())
         {
             _areProjectilesEnabled = !_areProjectilesEnabled;
+            _isAllEnabled = IsAllEnabled();
+            UpdateSaveFile();
         }
 
         if (ToggleBloons.JustPressed())
         {
             _areBloonsEnabled = !_areBloonsEnabled;
+            _isAllEnabled = IsAllEnabled();
+            UpdateSaveFile();
         }
 
         if (ToggleMapCollision.JustPressed())
         {
             _isMapEnabled = !_isMapEnabled;
+            _isAllEnabled = IsAllEnabled();
+            UpdateSaveFile();
         }
 
         if (ToggleTransparency.JustPressed())
         {
             _areHitboxesTransparent = !_areHitboxesTransparent;
             _transparency = _areHitboxesTransparent ? DefaultTransparency : 1f;
+            _isAllEnabled = IsAllEnabled();
+            UpdateSaveFile();
         }
-
-        _isAllEnabled = IsAllEnabled();
-
+        
         if (_areTowersEnabled)
         {
             foreach (var tower in InGame.Bridge.GetAllTowers())
