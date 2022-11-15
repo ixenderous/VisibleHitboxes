@@ -10,7 +10,8 @@ using BTD_Mod_Helper.Api.Enums;
 using BTD_Mod_Helper.Api.ModOptions;
 using BTD_Mod_Helper.Extensions;
 using HitboxMod;
-using Il2CppSystem.Collections.Generic;
+using System.Collections.Generic;
+using Assets.Scripts.Models.Map;
 using MelonLoader;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -52,6 +53,13 @@ public class Main : BloonsTD6Mod
     private static readonly Color ModifierProjectileColor = new(1f, 0.20f, 0.60f);
     private static readonly Color BloonColor = new(1f, 1f, 0f);
     private static readonly Color PathColor = new(0.9f, 0.95f, 0.85f);
+
+    private const int HeldTowerHitboxId = -1;
+    private const int LineRendererId = -2;
+
+    private static List<string> _prevIdentifiers = new();
+
+    private static readonly Dictionary<string, GameObject> HitboxDictionary = new();
 
     public static readonly ModSettingCategory Hotkeys = new("Hotkeys")
     {
@@ -105,9 +113,8 @@ public class Main : BloonsTD6Mod
     {
         base.OnMatchEnd();
         _isInGame = false;
-        var activeIdentifiers = new List<int>();
-        var displayRoot = Game.instance.GetDisplayFactory().DisplayRoot;
-        RemoveUnusedHitboxes(displayRoot, activeIdentifiers); // Cleanup
+        var activeIdentifiers = _prevIdentifiers;
+        RemoveUnusedHitboxes(activeIdentifiers); // Cleanup
     }
     
     public override void OnInitialize()
@@ -229,13 +236,23 @@ public class Main : BloonsTD6Mod
         File.WriteAllText(_saveFileLocation + "\\" + saveFile, json.ToString(Formatting.Indented));
     }
 
+    private static void TryAddDictionary (Dictionary<string, GameObject> dictionary, string key, GameObject value)
+    {
+        try
+        {
+            dictionary.Add(key, value);
+        }
+        catch (Exception)
+        {
+            // ignored
+        }
+    }
+    
     public override void OnUpdate()
     {
-        base.OnUpdate();
-        
         if (!_isInGame) return;
 
-        var activeIdentifiers = new List<int>();
+        var activeIdentifiers = new List<string>();
         var displayRoot = Game.instance.GetDisplayFactory().DisplayRoot;
         
         if (ToggleAll.JustPressed())
@@ -304,8 +321,13 @@ public class Main : BloonsTD6Mod
                 var simDisplay = tower.GetSimTower().GetUnityDisplayNode().gameObject.transform;
                 var footprint = tower.Def.footprint;
                 var towerId = tower.Id.Id;
-                activeIdentifiers.Add(tower.Id.Id);
-                CreateTowerHitbox(simDisplay, TowerColor, footprint, towerId.ToString());
+                activeIdentifiers.Add(tower.Id.Id.ToString());
+                var hitbox = CreateTowerHitbox(simDisplay, TowerColor, footprint, towerId.ToString());
+                if (hitbox != null)
+                {
+                    TryAddDictionary(HitboxDictionary, towerId.ToString(), hitbox);
+                    UpdateHitbox(hitbox, simDisplay.position, TowerColor);
+                }
             }
 
             // Held tower hitbox
@@ -323,9 +345,13 @@ public class Main : BloonsTD6Mod
                 var inputId = InGame.Bridge.GetInputId();
                 var canPlace = InGame.Bridge.CanPlaceTowerAt(towerPos, placementModel, inputId, placementTowerId);
                 var color = canPlace ? TowerColor : InvalidPositionColor;
-                activeIdentifiers.Add(-1);
-                CreateTowerHitbox(simDisplay, color, footprint, "-1");
-                UpdateHitbox(simDisplay, simDisplay.transform.position, "-1", color);
+                activeIdentifiers.Add(HeldTowerHitboxId.ToString());
+                var hitbox = CreateTowerHitbox(simDisplay, color, footprint, HeldTowerHitboxId.ToString());
+                if (hitbox != null)
+                {
+                    TryAddDictionary(HitboxDictionary, HeldTowerHitboxId.ToString(), hitbox);
+                    UpdateHitbox(hitbox, simDisplay.position, color);
+                }
             }
         }
 
@@ -334,9 +360,8 @@ public class Main : BloonsTD6Mod
             foreach (var projectile in InGame.Bridge.GetAllProjectiles())
             {
                 var projectileId = projectile.Id.Id;
-                activeIdentifiers.Add(projectileId);
+                activeIdentifiers.Add(projectileId.ToString());
                 var radius = projectile.radius;
-                var color = ProjectileColor;
                 if (projectile.GetUnityDisplayNode() == null)
                 {
                     var projectileModel = projectile.projectileModel;
@@ -345,18 +370,23 @@ public class Main : BloonsTD6Mod
                     if (hasDisplay) continue;
 
                     // Invisible model
-                    color = InvisibleProjectileColor;
                     if (projectile.display.node != null)
                     {
                         var projectilePos = projectile.display.node.position.data;
                         var displayPos = new Vector3(projectilePos.x, 0f, -projectilePos.y);
-                        CreateSphericalHitbox(displayRoot, color, radius, displayPos, projectileId.ToString());
-                        UpdateHitbox(displayRoot, displayPos, projectileId.ToString(), color);
+                        var invhitbox = CreateSphericalHitbox(displayRoot, InvisibleProjectileColor, radius, displayPos, projectileId.ToString());
+                        TryAddDictionary(HitboxDictionary, projectileId.ToString(), invhitbox);
+                        UpdateHitbox(invhitbox, displayPos, InvisibleProjectileColor);
                     }
                     continue;
                 }
                 var simDisplay = projectile.GetUnityDisplayNode().gameObject.transform;
-                CreateSphericalHitbox(simDisplay, color, radius, Vector3.zero, projectileId.ToString());
+                var hitbox = CreateSphericalHitbox(simDisplay, ProjectileColor, radius, Vector3.zero, projectileId.ToString());
+                if (hitbox != null)
+                {
+                    TryAddDictionary(HitboxDictionary, projectileId.ToString(), hitbox);
+                    UpdateHitbox(hitbox, hitbox.transform.position, ProjectileColor);
+                }
             }
         }
 
@@ -365,10 +395,8 @@ public class Main : BloonsTD6Mod
             foreach (var bloon in InGame.Bridge.GetAllBloons())
             {
                 var bloonId = bloon.id.Id;
-                activeIdentifiers.Add(bloonId);
                 if (bloon.GetUnityDisplayNode() == null) continue;
                 var simDisplay = bloon.GetUnityDisplayNode().gameObject.transform;
-                var color = BloonColor;
                 var collisionData = bloon.GetSimBloon().AdditionalCollisions();
                 if (collisionData != null) // Bloons with multiple collisions. Usually reserved for MOAB class
                 {
@@ -377,68 +405,62 @@ public class Main : BloonsTD6Mod
                     {
                         var offset = new Vector3(collision.offset.x, 0f, collision.offset.y);
                         var radius = collision.radius;
-                        CreateSphericalHitbox(simDisplay, color, radius, offset, bloonId + "_" + count);
+                        var hName = bloonId + "_" + count;
+                        var hitbox = CreateSphericalHitbox(simDisplay, BloonColor, radius, offset, hName);
+                        if (hitbox != null)
+                        {
+                            activeIdentifiers.Add(hName);
+                            TryAddDictionary(HitboxDictionary, hName, hitbox);
+                            UpdateHitbox(hitbox, hitbox.transform.position, BloonColor);
+                        }
                         count++;
                     }
                 }
                 else // Single collision bloons
                 {
                     var radius = bloon.GetSimBloon().radius;
-                    CreateSphericalHitbox(simDisplay, color, radius, Vector3.zero, bloonId.ToString());
+                    var hitbox = CreateSphericalHitbox(simDisplay, BloonColor, radius, Vector3.zero, bloonId.ToString());
+                    if (hitbox != null)
+                    {
+                        activeIdentifiers.Add(bloonId.ToString());
+                        TryAddDictionary(HitboxDictionary, bloonId.ToString(), hitbox);
+                        UpdateHitbox(hitbox, hitbox.transform.position, BloonColor);
+                    }
                 }
             }
         }
 
         if (_isMapEnabled)
         {
-            activeIdentifiers.Add(-2);
             var index = 0;
             foreach (var path in InGame.instance.GetMap().mapModel.paths)
             {
-                var color = PathColor;
-                var gmLineRenderer = CreateLineRenderer(HitboxObjectName + "-2_" + index, color);
+                var hName = LineRendererId + "_" + index;
+                activeIdentifiers.Add(hName);
+                var gmLineRenderer = CreateLineRenderer(displayRoot.gameObject, hName, path, PathColor);
                 if (gmLineRenderer != null)
                 {
-                    var lineRenderer = gmLineRenderer.GetComponent<LineRenderer>();
-                    var pointArray = path.points;
-                    var convertedArray = new Vector3[pointArray.Length];
-                    lineRenderer.positionCount = pointArray.Length;
-                    for (var i = 0; i < pointArray.Length; i++)
-                    {
-                        var curPoint = pointArray[i].point;
-                        var convertedCur = new Vector3(curPoint.x, 0f, -curPoint.y);
-                        convertedArray[i] = convertedCur;
-                    }
-                    lineRenderer.SetPositions(convertedArray);
+                    TryAddDictionary(HitboxDictionary, hName, gmLineRenderer);
+                    UpdateHitbox(gmLineRenderer, Vector3.zero, PathColor);
                 }
                 index++;
             }
 
             // TODO create non-placeable area lines
-            /*
-            activeIdentifiers.Add(-3);
-            index = 0;
-            foreach (var blocker in InGame.instance.GetMap().mapModel.blockers)
-            {
-                var offset = new Vector3(blocker.circle.position.x, 0f, -blocker.circle.position.z);
-                CreateSphericalHitbox(displayRoot, Color.black, blocker.circle.radius, offset, "-3_" + index);
-                index++;
-            }
-            */
         }
-
-        RemoveUnusedHitboxes(displayRoot, activeIdentifiers);
+        
+        // Get list difference
+        var difList = _prevIdentifiers.Except(activeIdentifiers).ToList();
+        RemoveUnusedHitboxes(difList);
+        _prevIdentifiers = activeIdentifiers.Duplicate();
     }
 
-    private static GameObject? CreateLineRenderer(string name, Color color)
+    private static GameObject? CreateLineRenderer(GameObject displayRoot, string name, PathModel path, Color color)
     {
-        var displayRoot = Game.instance.GetDisplayFactory().DisplayRoot.gameObject;
-        foreach(var gameobject in GetAllChilds(displayRoot))
+        name = HitboxObjectName + name;
+        foreach (var gameobject in GetAllChilds(displayRoot).Where(gameobject => gameobject.name ==  name))
         {
-            if (gameobject.name ==  name)
-            {
-                return null;
-            }
+            return gameobject;
         }
 
         var gameObject = new GameObject(name)
@@ -448,9 +470,22 @@ public class Main : BloonsTD6Mod
                 parent = displayRoot.transform
             }
         };
+        
         gameObject.AddComponent<LineRenderer>();
-        gameObject.GetComponent<LineRenderer>().material = GetMaterial("ShaderTransparent");
-        gameObject.GetComponent<LineRenderer>().SetColors(color, color);
+        var lineRenderer = gameObject.GetComponent<LineRenderer>();
+        lineRenderer.material = GetMaterial("ShaderTransparent");
+        lineRenderer.SetColors(color, color);
+        
+        var pointArray = path.points;
+        var convertedArray = new Vector3[pointArray.Length];
+        lineRenderer.positionCount = pointArray.Length;
+        for (var i = 0; i < pointArray.Length; i++)
+        {
+            var curPoint = pointArray[i].point;
+            var convertedCur = new Vector3(curPoint.x, 0f, -curPoint.y);
+            convertedArray[i] = convertedCur;
+        }
+        lineRenderer.SetPositions(convertedArray);
         return gameObject;
     }
 
@@ -466,73 +501,49 @@ public class Main : BloonsTD6Mod
         return bundle.LoadAsset(name).Cast<Material>().Duplicate();
     }
 
-    private static void UpdateHitbox(Transform parent, Vector3 newPosition, string name, Color color)
+    private static void UpdateHitbox(GameObject hitbox, Vector3 newPosition, Color color)
     {
-        var hitbox = parent.FindChild(HitboxObjectName + name);
-        hitbox.position = newPosition;
-        hitbox.GetComponent<SpriteRenderer>().color = new Color(color.r, color.g, color.b, _transparency);
-    }
-
-    private static void RemoveUnusedHitboxes(Transform parent, List<int> activeIdentifiers)
-    {
-        foreach (var gameObject in GetAllChilds(parent.gameObject))
+        hitbox.transform.position = newPosition;
+        if (hitbox.HasComponent<SpriteRenderer>())
         {
-            if (gameObject.name.StartsWith(HitboxObjectName))
-            {
-                if (RemoveIfNotInList(gameObject, activeIdentifiers)) continue;
-                if (gameObject.HasComponent<SpriteRenderer>())
-                {
-                    var color = gameObject.GetComponent<SpriteRenderer>().color;
-                    gameObject.GetComponent<SpriteRenderer>().color = new Color(color.r, color.g, color.b, _transparency);
-                }
-                else if (gameObject.HasComponent<LineRenderer>())
-                {
-                    var renderer = gameObject.GetComponent<LineRenderer>();
-                    var color = renderer.startColor;
-                    color = new Color(color.r, color.g, color.b, _transparency);
-                    renderer.SetColors(color, color);
-                }
-            }
-            else
-            {
-                foreach (var child in GetAllChilds(gameObject))
-                {
-                    if (child.name.StartsWith(HitboxObjectName))
-                    {
-                        if (RemoveIfNotInList(child, activeIdentifiers)) continue;
-                        if (child.HasComponent<SpriteRenderer>())
-                        {
-                            var color = child.GetComponent<SpriteRenderer>().color;
-                            child.GetComponent<SpriteRenderer>().color = new Color(color.r, color.g, color.b, _transparency);
-                        }
-                    }
-                }
-            }
+            hitbox.GetComponent<SpriteRenderer>().color = new Color(color.r, color.g, color.b, _transparency);
+        }
+        else if (hitbox.HasComponent<LineRenderer>())
+        {
+            var renderer = hitbox.GetComponent<LineRenderer>();
+            color = new Color(color.r, color.g, color.b, _transparency);
+            renderer.SetColors(color, color);
         }
     }
 
-    private static bool RemoveIfNotInList(GameObject gameObject, List<int> activeIdentifiers)
+    private static void RemoveUnusedHitboxes(List<string> inactiveIdentifiers)
     {
-        var tokens = gameObject.name.Split('_');
-        var id = int.Parse(tokens[1]);
-        if (activeIdentifiers.Contains(id)) return false;
-        UnityEngine.Object.Destroy(gameObject);
-        return true;
+        foreach (var identifier in inactiveIdentifiers)
+        {
+            var valueExists = HitboxDictionary.TryGetValue(identifier, out var value);
+            if (!valueExists) continue;
+            try
+            {
+                HitboxDictionary.Remove(identifier);
+            }
+            catch (Exception e)
+            {
+                Log(e);
+            }
+            UnityEngine.Object.Destroy(value);
+        }
     }
 
-    private static void CreateSphericalHitbox(Transform simDisplay, Color color, float radius, Vector3 offset, string name)
+    private static GameObject CreateSphericalHitbox(Transform simDisplay, Color color, float radius, Vector3 offset, string name)
     {
         name = HitboxObjectName + name;
         if (radius <= 0) {  // Some towers use pixel-perfect hitboxes. This makes them visible, but not accurate
             radius = 1f;
             color = ModifierProjectileColor;
         }
-        foreach(var gameobject in GetAllChilds(simDisplay.gameObject))
+        foreach (var gameobject in GetAllChilds(simDisplay.gameObject).Where(gameobject => gameobject.name == name))
         {
-            if (gameobject.name == name)
-            {
-                return;
-            }
+            return gameobject;
         }
 
         radius *= CircleSizeMultiplier;
@@ -543,16 +554,14 @@ public class Main : BloonsTD6Mod
         circle.transform.localPosition = offset;
         circle.transform.localScale = new Vector3(radius, radius, radius);
         circle.GetComponent<SpriteRenderer>().color = new Color(color.r, color.g, color.b, _transparency);
+        return circle;
     }
-    private static void CreateTowerHitbox(Transform simDisplay, Color color, Object footprint, string name)
+    private static GameObject? CreateTowerHitbox(Transform simDisplay, Color color, Object footprint, string name)
     {
         name = HitboxObjectName + name;
-        foreach(var gameobject in GetAllChilds(simDisplay.gameObject))
+        foreach (var gameobject in GetAllChilds(simDisplay.gameObject).Where(gameobject => gameobject.name == name))
         {
-            if (gameobject.name == name)
-            {
-                return;
-            }
+            return gameobject;
         }
         
         if (footprint.IsType<RectangleFootprintModel>())
@@ -564,8 +573,10 @@ public class Main : BloonsTD6Mod
             square.transform.localPosition = Vector3.zero;
             square.transform.localScale = new Vector3(footprintModel.xWidth, footprintModel.yWidth, footprintModel.yWidth);
             square.GetComponent<SpriteRenderer>().color = new Color(color.r, color.g, color.b, _transparency);
+            return square;
         }
-        else if (footprint.IsType<CircleFootprintModel>())
+
+        if (footprint.IsType<CircleFootprintModel>())
         {
             var footprintModel = footprint.Cast<CircleFootprintModel>();
             var circle = GetGameObject("Circle");
@@ -575,6 +586,9 @@ public class Main : BloonsTD6Mod
             circle.transform.localPosition = Vector3.zero;
             circle.transform.localScale = new Vector3(radius, radius, radius);
             circle.GetComponent<SpriteRenderer>().color = new Color(color.r, color.g, color.b, _transparency);
+            return circle;
         }
+
+        return null;
     }
 }
