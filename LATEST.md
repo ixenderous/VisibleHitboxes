@@ -1,1 +1,1 @@
-﻿Fixes lag with hitboxes deactivated. Sorry bout' that!
+﻿Map hitboxes added, big performance boost
