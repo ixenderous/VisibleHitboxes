@@ -125,7 +125,7 @@ public class Main : BloonsTD6Mod
     public override void OnProjectileCreated(Projectile projectile, Entity entity, Model modelToUse)
     {
         var projectileModel = modelToUse.Cast<ProjectileModel>();
-        var isInvisible = !(projectileModel.display.IsValid() || Enumerable.Any(projectileModel.behaviors, behavior => behavior.TypeName() == "SetSpriteFromPierceModel"));
+        var isInvisible = !(projectileModel.display.guidRef != "" || Enumerable.Any(projectileModel.behaviors, behavior => behavior.TypeName() == "SetSpriteFromPierceModel"));
 
         _handledProjectiles.Add(new HandledProjectile
         {
