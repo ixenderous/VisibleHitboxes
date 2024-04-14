@@ -1,1 +1,1 @@
-﻿Map hitboxes added, big performance boost
+﻿Updated for 42.1

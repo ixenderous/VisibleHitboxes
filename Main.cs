@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Linq;
-using Assets.Scripts.Models.Towers.Behaviors;
-using Assets.Scripts.Unity;
-using Assets.Scripts.Unity.UI_New.InGame;
+using Il2CppAssets.Scripts.Models.Towers.Behaviors;
+using Il2CppAssets.Scripts.Unity;
+using Il2CppAssets.Scripts.Unity.UI_New.InGame;
 using BTD_Mod_Helper;
 using BTD_Mod_Helper.Api;
 using BTD_Mod_Helper.Api.Enums;
@@ -10,12 +10,17 @@ using BTD_Mod_Helper.Api.ModOptions;
 using BTD_Mod_Helper.Extensions;
 using HitboxMod;
 using System.Collections.Generic;
-using Assets.Scripts.Models.Map;
-using Assets.Scripts.Models.Towers;
-using Assets.Scripts.Simulation.Towers;
+using Il2CppAssets.Scripts.Models;
+using Il2CppAssets.Scripts.Models.Map;
+using Il2CppAssets.Scripts.Models.Towers;
+using Il2CppAssets.Scripts.Models.Towers.Projectiles;
+using Il2CppAssets.Scripts.Simulation.Objects;
+using Il2CppAssets.Scripts.Simulation.Towers;
+using Il2CppAssets.Scripts.Simulation.Towers.Projectiles;
+using Il2CppInterop.Runtime.InteropTypes.Arrays;
 using MelonLoader;
-using UnhollowerBaseLib;
 using UnityEngine;
+using UnityEngine.Playables;
 using Main = HitboxMod.Main;
 using Object = Il2CppSystem.Object;
 
@@ -109,12 +114,32 @@ public class Main : BloonsTD6Mod
         var inactiveIdentifiers = _prevIdentifiers;
         RemoveUnusedHitboxes(inactiveIdentifiers); // Cleanup
     }
-    
+
     public override void OnInitialize()
     {
         _mllog = LoggerInstance;
     }
+
+    private static List<HandledProjectile> _handledProjectiles = new();
+
+    public override void OnProjectileCreated(Projectile projectile, Entity entity, Model modelToUse)
+    {
+        var projectileModel = modelToUse.Cast<ProjectileModel>();
+        var isInvisible = !(projectileModel.display.IsValid() || Enumerable.Any(projectileModel.behaviors, behavior => behavior.TypeName() == "SetSpriteFromPierceModel"));
+
+        _handledProjectiles.Add(new HandledProjectile
+        {
+            IsInvisible = isInvisible,
+            Projectile = projectile,
+        });
+    }
     
+    public class HandledProjectile
+    { 
+        public bool IsInvisible { get; init; }
+        public Projectile? Projectile { get; init; }
+    }
+
     public enum MessageType
     {
         Msg,
@@ -143,6 +168,7 @@ public class Main : BloonsTD6Mod
         base.OnTowerUpgraded(tower, upgradeName, newBaseTowerModel);
         HitboxDictionary.Remove(tower.Id.Id.ToString());
     }
+    
     public override void OnUpdate()
     {
         if (!_isInGame) return;
@@ -209,7 +235,7 @@ public class Main : BloonsTD6Mod
 
         if (SaveSystem.AreTowersEnabled)
         {
-            foreach (var tower in InGame.Bridge.GetAllTowers())
+            foreach (var tower in InGame.Bridge.GetAllTowers().ToList())
             {
                 if (tower.GetSimTower().GetUnityDisplayNode() == null) continue;
                 var simDisplay = tower.GetSimTower().GetUnityDisplayNode().gameObject.transform;
@@ -217,11 +243,9 @@ public class Main : BloonsTD6Mod
                 var footprint = tower.Def.footprint;
                 var towerId = tower.Id.Id;
                 var hitbox = CreateTowerHitbox(simDisplay, TowerColor, footprint, towerId.ToString());
-                if (hitbox != null)
-                {
-                    activeIdentifiers.Add(tower.Id.Id.ToString());
-                    HitboxDictionary.TryAdd(towerId.ToString(), hitbox);
-                }
+                if (hitbox == null) continue;
+                activeIdentifiers.Add(tower.Id.Id.ToString());
+                HitboxDictionary.TryAdd(towerId.ToString(), hitbox);
             }
 
             // Held tower hitbox
@@ -229,8 +253,8 @@ public class Main : BloonsTD6Mod
             var inputManager = InGame.instance.InputManager;
             var placementDisplayList = inputManager.placementGraphics;
             var placementModel = inputManager.placementModel;
-            var placementTowerId = inputManager.placementTowerId;
-            var towerPos = inputManager.towerPositionWorld;
+            var placementTowerId = inputManager.placementEntityId;
+            var towerPos = inputManager.entityPositionWorld;
             if (placementModel != null && placementDisplayList.Count > 0)
             {
                 var placementDisplay = placementDisplayList.First();
@@ -251,32 +275,30 @@ public class Main : BloonsTD6Mod
 
         if (SaveSystem.AreProjectilesEnabled)
         {
-            foreach (var projectile in InGame.Bridge.GetAllProjectiles())
+            foreach (var handledProjectile in _handledProjectiles)
             {
-                var projectileId = projectile.Id.Id;
+                var projectile = handledProjectile.Projectile;
+                var projectileId = projectile!.Id.Id;
                 var radius = projectile.radius;
-                if (projectile.GetUnityDisplayNode() == null)
-                {
-                    var projectileModel = projectile.projectileModel;
-                    if (projectileModel.display.IsValid) continue;
-                    var hasDisplay = Enumerable.Any(projectileModel.behaviors, behavior => behavior.TypeName() == "SetSpriteFromPierceModel");
-                    if (hasDisplay) continue;
 
-                    // Invisible model
-                    if (projectile.display.node != null)
+                if (projectile.isDestroyed) continue;
+
+                if (handledProjectile.IsInvisible)
+                {
+                    var projectilePos = projectile.display.node.position.data;
+                    var displayPos = new Vector3(projectilePos.x, 0f, -projectilePos.y);
+                    var invhitbox = CreateCircularHitbox(displayRoot, InvisibleProjectileColor, radius, displayPos, projectileId.ToString());
+                    if (invhitbox != null)
                     {
-                        var projectilePos = projectile.display.node.position.data;
-                        var displayPos = new Vector3(projectilePos.x, 0f, -projectilePos.y);
-                        var invhitbox = CreateCircularHitbox(displayRoot, InvisibleProjectileColor, radius, displayPos, projectileId.ToString());
-                        if (invhitbox != null)
-                        {
-                            activeIdentifiers.Add(projectileId.ToString());
-                            HitboxDictionary.TryAdd(projectileId.ToString(), invhitbox);
-                            UpdateHitbox(invhitbox, displayPos, InvisibleProjectileColor);
-                        }
+                        activeIdentifiers.Add(projectileId.ToString());
+                        HitboxDictionary.TryAdd(projectileId.ToString(), invhitbox);
+                        UpdateHitbox(invhitbox, displayPos, InvisibleProjectileColor);
                     }
                     continue;
                 }
+                
+                if (projectile.GetUnityDisplayNode() == null) continue;
+                
                 var simDisplay = projectile.GetUnityDisplayNode().gameObject.transform;
                 if (!simDisplay.gameObject.active) continue;
                 var hitbox = CreateCircularHitbox(simDisplay, ProjectileColor, radius, Vector3.zero, projectileId.ToString());
@@ -285,12 +307,15 @@ public class Main : BloonsTD6Mod
                     activeIdentifiers.Add(projectileId.ToString());
                     HitboxDictionary.TryAdd(projectileId.ToString(), hitbox);
                 }
+                
+                _handledProjectiles = _handledProjectiles
+                    .Where(hProjectile => !hProjectile.Projectile!.IsDestroyed).ToList();
             }
         }
 
         if (SaveSystem.AreBloonsEnabled)
         {
-            foreach (var bloon in InGame.Bridge.GetAllBloons())
+            foreach (var bloon in InGame.Bridge.GetAllBloons().ToList())
             {
                 var bloonId = bloon.id.Id;
                 if (bloon.GetUnityDisplayNode() == null) continue;
@@ -524,7 +549,7 @@ public class Main : BloonsTD6Mod
         }
         name = HitboxObjectName + name;
         
-        if (radius <= 0) {  // Some towers use pixel-perfect hitboxes. This makes them visible, but not accurate
+        if (radius <= 0) {  // Some projectiles use pixel-perfect hitboxes. This makes them visible at the cost of accuracy.
             radius = 1f;
             color = ModifierProjectileColor;
         }
@@ -535,11 +560,13 @@ public class Main : BloonsTD6Mod
         circle.name = name;
         circle.transform.parent = simDisplay;
         circle.transform.localPosition = offset;
-        circle.transform.localScale = new Vector3(radius, radius, radius);
+        circle.transform.localScale = new Vector3(
+            radius, 
+            radius, 
+            radius);
         var spriteRenderer = circle.GetComponent<SpriteRenderer>();
         spriteRenderer.color = new Color(color.r, color.g, color.b, SaveSystem.Transparency);
         spriteRenderer.sortingLayerName = "Bloons";
-        spriteRenderer.sortingOrder = 32767;
         return circle;
     }
     private static GameObject? CreateTowerHitbox(Transform simDisplay, Color color, Object footprint, string name)
@@ -550,6 +577,7 @@ public class Main : BloonsTD6Mod
             return null;
         }
         name = HitboxObjectName + name;
+        var scaleModifier = 1f / simDisplay.localScale.x;
 
         if (footprint.IsType<RectangleFootprintModel>())
         {
@@ -558,14 +586,17 @@ public class Main : BloonsTD6Mod
             square.name = name;
             square.transform.parent = simDisplay;
             square.transform.localPosition = Vector3.zero;
-            square.transform.localScale = new Vector3(footprintModel.xWidth, footprintModel.yWidth, footprintModel.yWidth);
+            square.transform.localScale = new Vector3(
+                footprintModel.xWidth * scaleModifier,
+                footprintModel.yWidth * scaleModifier, 
+                footprintModel.yWidth * scaleModifier);
             var spriteRenderer = square.GetComponent<SpriteRenderer>();
             spriteRenderer.color = new Color(color.r, color.g, color.b, SaveSystem.Transparency);
             spriteRenderer.sortingLayerName = "Bloons";
             return square;
         }
 
-        if (footprint.IsType<CircleFootprintModel>())
+        else
         {
             var footprintModel = footprint.Cast<CircleFootprintModel>();
             var circle = GetGameObject("Circle");
@@ -573,12 +604,14 @@ public class Main : BloonsTD6Mod
             circle.name = name;
             circle.transform.parent = simDisplay;
             circle.transform.localPosition = Vector3.zero;
-            circle.transform.localScale = new Vector3(radius, radius, radius);
+            circle.transform.localScale = new Vector3(
+                radius * scaleModifier, 
+                radius * scaleModifier, 
+                radius * scaleModifier);
             var spriteRenderer = circle.GetComponent<SpriteRenderer>();
             spriteRenderer.color = new Color(color.r, color.g, color.b, SaveSystem.Transparency);
             spriteRenderer.sortingLayerName = "Bloons";
             return circle;
         }
-        return null;
     }
 }
