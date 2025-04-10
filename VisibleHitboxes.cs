@@ -1,7 +1,5 @@
 ﻿using BTD_Mod_Helper;
 using BTD_Mod_Helper.Api;
-using BTD_Mod_Helper.Api.Enums;
-using BTD_Mod_Helper.Api.ModOptions;
 using BTD_Mod_Helper.Extensions;
 using System;
 using System.Linq;
@@ -55,47 +53,6 @@ public class VisibleHitboxes : BloonsTD6Mod
 
     private static readonly Dictionary<string, GameObject> HitboxDictionary = new();
 
-    public static readonly ModSettingCategory Hotkeys = new("Hotkeys")
-    {
-        collapsed = false
-    };
-
-    public static readonly ModSettingHotkey ToggleAll = new(KeyCode.A, HotkeyModifier.Shift)
-    {
-        category = Hotkeys,
-        icon = VanillaSprites.EvenFasterProductionUpgradeIcon
-    };
-    
-    public static readonly ModSettingHotkey ToggleTowers = new(KeyCode.T, HotkeyModifier.Shift)
-    {
-        category = Hotkeys,
-        icon = VanillaSprites.SuperMonkeyFanClubUpgradeIcon
-    };
-    
-    public static readonly ModSettingHotkey ToggleProjectiles = new(KeyCode.P, HotkeyModifier.Shift)
-    {
-        category = Hotkeys,
-        icon = VanillaSprites.AirburstDartsUpgradeIcon
-    };
-    
-    public static readonly ModSettingHotkey ToggleBloons = new(KeyCode.B, HotkeyModifier.Shift)
-    {
-        category = Hotkeys,
-        icon = VanillaSprites.FullMetalJacketUpgradeIcon
-    };
-    
-    public static readonly ModSettingHotkey ToggleMapCollision = new(KeyCode.M, HotkeyModifier.Shift)
-    {
-        category = Hotkeys,
-        icon = VanillaSprites.MetropolisUpgradeIcon
-    };
-    
-    public static readonly ModSettingHotkey ToggleTransparency = new(KeyCode.D, HotkeyModifier.Shift)
-    {
-        category = Hotkeys,
-        icon = VanillaSprites.ShimmerUpgradeIcon
-    };
-
     public override void OnMatchStart()
     {
         base.OnMatchStart();
@@ -108,7 +65,7 @@ public class VisibleHitboxes : BloonsTD6Mod
         base.OnMatchEnd();
         _isInGame = false;
         var inactiveIdentifiers = _prevIdentifiers;
-        RemoveUnusedHitboxes(inactiveIdentifiers); // Cleanup
+        RemoveUnusedHitboxes(inactiveIdentifiers);
     }
 
     public override void OnInitialize()
@@ -172,7 +129,7 @@ public class VisibleHitboxes : BloonsTD6Mod
         var activeIdentifiers = new List<string>();
         var displayRoot = Game.instance.GetDisplayFactory().DisplayRoot;
         
-        if (ToggleAll.JustPressed())
+        if (Settings.ToggleAll.JustPressed())
         {
             if (SaveSystem.IsAllEnabled)
             {
@@ -192,35 +149,35 @@ public class VisibleHitboxes : BloonsTD6Mod
             SaveSystem.UpdateSaveFile();
         }
 
-        if (ToggleTowers.JustPressed())
+        if (Settings.ToggleTowers.JustPressed())
         {
             SaveSystem.AreTowersEnabled = !SaveSystem.AreTowersEnabled;
             SaveSystem.IsAllEnabled = SaveSystem.IsEverythingEnabled();
             SaveSystem.UpdateSaveFile();
         }
 
-        if (ToggleProjectiles.JustPressed())
+        if (Settings.ToggleProjectiles.JustPressed())
         {
             SaveSystem.AreProjectilesEnabled = !SaveSystem.AreProjectilesEnabled;
             SaveSystem.IsAllEnabled = SaveSystem.IsEverythingEnabled();
             SaveSystem.UpdateSaveFile();
         }
 
-        if (ToggleBloons.JustPressed())
+        if (Settings.ToggleBloons.JustPressed())
         {
             SaveSystem.AreBloonsEnabled = !SaveSystem.AreBloonsEnabled;
             SaveSystem.IsAllEnabled = SaveSystem.IsEverythingEnabled();
             SaveSystem.UpdateSaveFile();
         }
 
-        if (ToggleMapCollision.JustPressed())
+        if (Settings.ToggleMapCollision.JustPressed())
         {
             SaveSystem.IsMapEnabled = !SaveSystem.IsMapEnabled;
             SaveSystem.IsAllEnabled = SaveSystem.IsEverythingEnabled();
             SaveSystem.UpdateSaveFile();
         }
 
-        if (ToggleTransparency.JustPressed())
+        if (Settings.ToggleTransparency.JustPressed())
         {
             SaveSystem.AreHitboxesTransparent = !SaveSystem.AreHitboxesTransparent;
             SaveSystem.Transparency = SaveSystem.AreHitboxesTransparent ? DefaultTransparency : 1f;
