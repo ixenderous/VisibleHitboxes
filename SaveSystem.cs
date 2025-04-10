@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using MelonLoader;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -68,7 +69,7 @@ public static class SaveSystem
         }
         catch (Exception e)
         {
-            VisibleHitboxes.Log(e, VisibleHitboxes.MessageType.Error);
+            MelonLogger.Error(e);
         }
     }
 

@@ -28,8 +28,6 @@ namespace VisibleHitboxes;
 public class VisibleHitboxes : BloonsTD6Mod
 {
     private bool _isInGame;
-    
-    private static MelonLogger.Instance _mllog = null!;
 
     private const float CircleSizeMultiplier = 2f;
     public const float DefaultTransparency = 0.5f;
@@ -68,11 +66,6 @@ public class VisibleHitboxes : BloonsTD6Mod
         RemoveUnusedHitboxes(inactiveIdentifiers);
     }
 
-    public override void OnInitialize()
-    {
-        _mllog = LoggerInstance;
-    }
-
     private static List<HandledProjectile> _handledProjectiles = new();
 
     public override void OnProjectileCreated(Projectile projectile, Entity entity, Model modelToUse)
@@ -91,29 +84,6 @@ public class VisibleHitboxes : BloonsTD6Mod
     { 
         public bool IsInvisible { get; init; }
         public Projectile? Projectile { get; init; }
-    }
-
-    public enum MessageType
-    {
-        Msg,
-        Warn,
-        Error
-    }
-    public static void Log(object thingtolog,MessageType type= MessageType.Msg)
-    {
-        switch (type) {
-            case MessageType.Msg:
-                _mllog.Msg(thingtolog);
-                break;
-            case MessageType.Warn:
-                _mllog.Warning(thingtolog);
-                break;
-            case MessageType.Error:
-                _mllog.Error(thingtolog);
-                break;
-            default:
-                throw new ArgumentOutOfRangeException(nameof(type), type, null);
-        }
     }
 
     public override void OnTowerUpgraded(Tower tower, string upgradeName, TowerModel newBaseTowerModel)
@@ -341,7 +311,6 @@ public class VisibleHitboxes : BloonsTD6Mod
             }
         }
         
-        // Get list difference
         var difList = _prevIdentifiers.Except(activeIdentifiers).ToList();
         RemoveUnusedHitboxes(difList);
         _prevIdentifiers = activeIdentifiers.Duplicate();
@@ -487,7 +456,7 @@ public class VisibleHitboxes : BloonsTD6Mod
             }
             catch (Exception e)
             {
-                Log(e);
+                MelonLogger.Error(e);
             }
             UnityEngine.Object.Destroy(value);
         }
