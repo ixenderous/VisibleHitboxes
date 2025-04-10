@@ -1,37 +1,33 @@
-﻿using System;
-using System.Linq;
-using Il2CppAssets.Scripts.Models.Towers.Behaviors;
-using Il2CppAssets.Scripts.Unity;
-using Il2CppAssets.Scripts.Unity.UI_New.InGame;
-using BTD_Mod_Helper;
+﻿using BTD_Mod_Helper;
 using BTD_Mod_Helper.Api;
 using BTD_Mod_Helper.Api.Enums;
 using BTD_Mod_Helper.Api.ModOptions;
 using BTD_Mod_Helper.Extensions;
-using HitboxMod;
+using System;
+using System.Linq;
 using System.Collections.Generic;
+using Il2CppInterop.Runtime.InteropTypes.Arrays;
 using Il2CppAssets.Scripts.Models;
 using Il2CppAssets.Scripts.Models.Map;
 using Il2CppAssets.Scripts.Models.Towers;
 using Il2CppAssets.Scripts.Models.Towers.Projectiles;
+using Il2CppAssets.Scripts.Models.Towers.Behaviors;
 using Il2CppAssets.Scripts.Simulation.Objects;
 using Il2CppAssets.Scripts.Simulation.Towers;
 using Il2CppAssets.Scripts.Simulation.Towers.Projectiles;
-using Il2CppInterop.Runtime.InteropTypes.Arrays;
+using Il2CppAssets.Scripts.Unity;
+using Il2CppAssets.Scripts.Unity.UI_New.InGame;
 using MelonLoader;
 using UnityEngine;
-using UnityEngine.Playables;
-using Main = HitboxMod.Main;
+using VisibleHitboxes;
 using Object = Il2CppSystem.Object;
 
-// ReSharper disable MemberCanBePrivate.Global
-
-[assembly: MelonInfo(typeof(Main), ModHelperData.Name, ModHelperData.Version, ModHelperData.RepoOwner)]
+[assembly: MelonInfo(typeof(global::VisibleHitboxes.VisibleHitboxes), ModHelperData.Name, ModHelperData.Version, ModHelperData.RepoOwner)]
 [assembly: MelonGame("Ninja Kiwi", "BloonsTD6")]
 
-namespace HitboxMod;
+namespace VisibleHitboxes;
 
-public class Main : BloonsTD6Mod
+public class VisibleHitboxes : BloonsTD6Mod
 {
     private bool _isInGame;
     
@@ -279,13 +275,13 @@ public class Main : BloonsTD6Mod
             {
                 var projectile = handledProjectile.Projectile;
                 var projectileId = projectile!.Id.Id;
-                var radius = projectile.radius;
+                var radius = projectile.Radius;
 
                 if (projectile.isDestroyed) continue;
 
                 if (handledProjectile.IsInvisible)
                 {
-                    var projectilePos = projectile.display.node.position.data;
+                    var projectilePos = projectile.Display.node.position.data;
                     var displayPos = new Vector3(projectilePos.x, 0f, -projectilePos.y);
                     var invhitbox = CreateCircularHitbox(displayRoot, InvisibleProjectileColor, radius, displayPos, projectileId.ToString());
                     if (invhitbox != null)
@@ -342,7 +338,7 @@ public class Main : BloonsTD6Mod
                 }
                 else // Single collision bloons
                 {
-                    var radius = bloon.GetSimBloon().radius;
+                    var radius = bloon.GetSimBloon().Radius;
                     var hitbox = CreateCircularHitbox(simDisplay, BloonColor, radius, Vector3.zero, bloonId.ToString());
                     if (hitbox != null)
                     {
@@ -479,13 +475,13 @@ public class Main : BloonsTD6Mod
 
     private static GameObject GetGameObject(string name)
     {
-        var bundle = ModContent.GetBundle(ModHelper.GetMod("HitboxMod"), "debugmat");
+        var bundle = ModContent.GetBundle(ModHelper.GetMod("VisibleHitboxes"), "debugmat");
         return bundle.LoadAsset(name).Cast<GameObject>().Duplicate();
     }
 
     private static Material GetMaterial(string name)
     {
-        var bundle = ModContent.GetBundle(ModHelper.GetMod("HitboxMod"), "debugmat");
+        var bundle = ModContent.GetBundle(ModHelper.GetMod("VisibleHitboxes"), "debugmat");
         return bundle.LoadAsset(name).Cast<Material>().Duplicate();
     }
     

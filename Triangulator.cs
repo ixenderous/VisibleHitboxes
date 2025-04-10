@@ -1,4 +1,4 @@
-﻿namespace HitboxMod;
+﻿namespace VisibleHitboxes;
 
 using UnityEngine;
 using System.Collections.Generic;

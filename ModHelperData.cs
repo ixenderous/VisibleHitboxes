@@ -1,11 +1,11 @@
-﻿namespace HitboxMod;
+﻿namespace VisibleHitboxes;
 
 public static class ModHelperData
 {
-    public const string WorksOnVersion = "42.1";
-    public const string Version = "1.0.5";
-    public const string Name = "Hitbox Mod";
-    public const string Description = "Shows every hitbox in the game, with customizable filter options";
-    public const string RepoOwner = "TheMegax";
-    public const string RepoName = "https://github.com/TheMegax/HitboxMod";
+    public const string WorksOnVersion = "48.1";
+    public const string Version = "0.0.1";
+    public const string Name = "VisibleHitboxes";
+    public const string Description = "description";
+    public const string RepoOwner = "iXendeRouS";
+    public const string RepoName = "VisibleHitboxes";
 }

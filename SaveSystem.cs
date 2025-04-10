@@ -3,7 +3,7 @@ using System.IO;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-namespace HitboxMod;
+namespace VisibleHitboxes;
 
 public static class SaveSystem
 {
@@ -14,7 +14,7 @@ public static class SaveSystem
     public static bool AreBloonsEnabled = true;
     public static bool IsMapEnabled = true;
     public static bool AreHitboxesTransparent = true;
-    public static float Transparency = Main.DefaultTransparency;
+    public static float Transparency = VisibleHitboxes.DefaultTransparency;
     
     public static bool IsEverythingEnabled()
     {
@@ -30,7 +30,7 @@ public static class SaveSystem
                 _saveFileLocation = Directory.GetParent(System.Reflection.Assembly.GetExecutingAssembly().Location)?.FullName + folder;
                 Directory.CreateDirectory(_saveFileLocation);
             }
-            const string saveFile = "HitboxMod.json";
+            const string saveFile = "VisibleHitboxes.json";
             
             var fileName = _saveFileLocation + "\\" + saveFile;
             
@@ -68,7 +68,7 @@ public static class SaveSystem
         }
         catch (Exception e)
         {
-            Main.Log(e, Main.MessageType.Error);
+            VisibleHitboxes.Log(e, VisibleHitboxes.MessageType.Error);
         }
     }
 
@@ -80,7 +80,7 @@ public static class SaveSystem
             _saveFileLocation = Directory.GetParent(System.Reflection.Assembly.GetExecutingAssembly().Location)?.FullName + folder;
             Directory.CreateDirectory(_saveFileLocation);
         }
-        const string saveFile = "HitboxMod.json";
+        const string saveFile = "VisibleHitboxes.json";
         
         var json = new JObject
         {
