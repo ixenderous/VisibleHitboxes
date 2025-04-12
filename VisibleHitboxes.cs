@@ -20,7 +20,7 @@ using UnityEngine;
 using VisibleHitboxes;
 using Object = Il2CppSystem.Object;
 
-[assembly: MelonInfo(typeof(global::VisibleHitboxes.VisibleHitboxes), ModHelperData.Name, ModHelperData.Version, ModHelperData.RepoOwner)]
+[assembly: MelonInfo(typeof(VisibleHitboxes.VisibleHitboxes), ModHelperData.Name, ModHelperData.Version, ModHelperData.RepoOwner)]
 [assembly: MelonGame("Ninja Kiwi", "BloonsTD6")]
 
 namespace VisibleHitboxes;
@@ -30,7 +30,6 @@ public class VisibleHitboxes : BloonsTD6Mod
     private bool _isInGame;
 
     private const float CircleSizeMultiplier = 2f;
-    public const float DefaultTransparency = 0.5f;
     private const string HitboxObjectName = "Hitbox_";
     
     private static readonly Color TowerColor = new(1f, 1f, 0.85f);
@@ -55,7 +54,6 @@ public class VisibleHitboxes : BloonsTD6Mod
     {
         base.OnMatchStart();
         _isInGame = true;
-        SaveSystem.LoadSaveFile();
     }
 
     public override void OnMatchEnd()
@@ -91,76 +89,51 @@ public class VisibleHitboxes : BloonsTD6Mod
         base.OnTowerUpgraded(tower, upgradeName, newBaseTowerModel);
         HitboxDictionary.Remove(tower.Id.Id.ToString());
     }
-    
+
     public override void OnUpdate()
     {
         if (!_isInGame) return;
 
         var activeIdentifiers = new List<string>();
         var displayRoot = Game.instance.GetDisplayFactory().DisplayRoot;
-        
+
+        // Handle Toggle All hotkey
         if (Settings.ToggleAll.JustPressed())
         {
-            if (SaveSystem.IsAllEnabled)
-            {
-                SaveSystem.AreBloonsEnabled = false;
-                SaveSystem.AreProjectilesEnabled = false;
-                SaveSystem.AreTowersEnabled = false;
-                SaveSystem.IsMapEnabled = false;
-            }
-            else
-            {
-                SaveSystem.AreBloonsEnabled = true;
-                SaveSystem.AreProjectilesEnabled = true;
-                SaveSystem.AreTowersEnabled = true;
-                SaveSystem.IsMapEnabled = true;
-            }
-            SaveSystem.IsAllEnabled = SaveSystem.IsEverythingEnabled();
-            SaveSystem.UpdateSaveFile();
-        }
-
-        if (Settings.ToggleTowers.JustPressed())
-        {
-            SaveSystem.AreTowersEnabled = !SaveSystem.AreTowersEnabled;
-            SaveSystem.IsAllEnabled = SaveSystem.IsEverythingEnabled();
-            SaveSystem.UpdateSaveFile();
-        }
-
-        if (Settings.ToggleProjectiles.JustPressed())
-        {
-            SaveSystem.AreProjectilesEnabled = !SaveSystem.AreProjectilesEnabled;
-            SaveSystem.IsAllEnabled = SaveSystem.IsEverythingEnabled();
-            SaveSystem.UpdateSaveFile();
-        }
-
-        if (Settings.ToggleBloons.JustPressed())
-        {
-            SaveSystem.AreBloonsEnabled = !SaveSystem.AreBloonsEnabled;
-            SaveSystem.IsAllEnabled = SaveSystem.IsEverythingEnabled();
-            SaveSystem.UpdateSaveFile();
-        }
-
-        if (Settings.ToggleMapCollision.JustPressed())
-        {
-            SaveSystem.IsMapEnabled = !SaveSystem.IsMapEnabled;
-            SaveSystem.IsAllEnabled = SaveSystem.IsEverythingEnabled();
-            SaveSystem.UpdateSaveFile();
-        }
-
-        if (Settings.ToggleTransparency.JustPressed())
-        {
-            SaveSystem.AreHitboxesTransparent = !SaveSystem.AreHitboxesTransparent;
-            SaveSystem.Transparency = SaveSystem.AreHitboxesTransparent ? DefaultTransparency : 1f;
-            SaveSystem.IsAllEnabled = SaveSystem.IsEverythingEnabled();
-            SaveSystem.UpdateSaveFile();
+            bool newState = !Settings.IsEverythingEnabled();
+            Settings.ShowTowers.SetValue(newState);
+            Settings.ShowProjectiles.SetValue(newState);
+            Settings.ShowBloons.SetValue(newState);
+            Settings.ShowMapCollision.SetValue(newState);
             UpdateAllHitboxes();
         }
 
-        if (SaveSystem.AreTowersEnabled)
+        // Handle individual toggle hotkeys
+        if (Settings.ToggleTowers.JustPressed())
+            Settings.ShowTowers.SetValue(!Settings.ShowTowers);
+        
+        if (Settings.ToggleProjectiles.JustPressed())
+            Settings.ShowProjectiles.SetValue(!Settings.ShowProjectiles);
+
+        if (Settings.ToggleBloons.JustPressed())
+            Settings.ShowBloons.SetValue(!Settings.ShowBloons);
+
+        if (Settings.ToggleMapCollision.JustPressed())
+            Settings.ShowMapCollision.SetValue(!Settings.ShowMapCollision);
+
+        if (Settings.ToggleTransparency.JustPressed())
+        {
+            Settings.UseTransparency.SetValue(!Settings.UseTransparency);
+            UpdateAllHitboxes();
+        }
+
+        // Handle tower hitboxes
+        if (Settings.ShowTowers)
         {
             foreach (var tower in InGame.Bridge.GetAllTowers().ToList())
             {
                 if (tower.GetSimTower().GetUnityDisplayNode() == null) continue;
+
                 var simDisplay = tower.GetSimTower().GetUnityDisplayNode().gameObject.transform;
                 if (!simDisplay.gameObject.active) continue;
                 var footprint = tower.Def.footprint;
@@ -172,7 +145,6 @@ public class VisibleHitboxes : BloonsTD6Mod
             }
 
             // Held tower hitbox
-            // TODO this doesn't detect map obstacles, only paths
             var inputManager = InGame.instance.InputManager;
             var placementDisplayList = inputManager.placementGraphics;
             var placementModel = inputManager.placementModel;
@@ -183,7 +155,7 @@ public class VisibleHitboxes : BloonsTD6Mod
                 var placementDisplay = placementDisplayList.First();
                 var simDisplay = placementDisplay.gameObject.transform;
                 var footprint = placementModel.footprint;
-                var inputId = InGame.Bridge.GetInputId(); // Still have no idea what this is
+                var inputId = InGame.Bridge.GetInputId();
                 var canPlace = InGame.Bridge.CanPlaceTowerAt(towerPos, placementModel, inputId, placementTowerId);
                 var color = canPlace ? TowerColor : InvalidPositionColor;
                 var hitbox = CreateTowerHitbox(simDisplay, color, footprint, HeldTowerHitboxId.ToString());
@@ -196,7 +168,8 @@ public class VisibleHitboxes : BloonsTD6Mod
             }
         }
 
-        if (SaveSystem.AreProjectilesEnabled)
+        // Handle projectile hitboxes
+        if (Settings.ShowProjectiles)
         {
             foreach (var handledProjectile in _handledProjectiles)
             {
@@ -219,9 +192,9 @@ public class VisibleHitboxes : BloonsTD6Mod
                     }
                     continue;
                 }
-                
+
                 if (projectile.GetUnityDisplayNode() == null) continue;
-                
+
                 var simDisplay = projectile.GetUnityDisplayNode().gameObject.transform;
                 if (!simDisplay.gameObject.active) continue;
                 var hitbox = CreateCircularHitbox(simDisplay, ProjectileColor, radius, Vector3.zero, projectileId.ToString());
@@ -230,13 +203,14 @@ public class VisibleHitboxes : BloonsTD6Mod
                     activeIdentifiers.Add(projectileId.ToString());
                     HitboxDictionary.TryAdd(projectileId.ToString(), hitbox);
                 }
-                
+
                 _handledProjectiles = _handledProjectiles
                     .Where(hProjectile => !hProjectile.Projectile!.IsDestroyed).ToList();
             }
         }
 
-        if (SaveSystem.AreBloonsEnabled)
+        // Handle bloon hitboxes
+        if (Settings.ShowBloons)
         {
             foreach (var bloon in InGame.Bridge.GetAllBloons().ToList())
             {
@@ -277,7 +251,8 @@ public class VisibleHitboxes : BloonsTD6Mod
             }
         }
 
-        if (SaveSystem.IsMapEnabled)
+        // Handle map collision hitboxes
+        if (Settings.ShowMapCollision)
         {
             var index = 0;
             foreach (var path in InGame.instance.GetMap().mapModel.paths)
@@ -302,7 +277,7 @@ public class VisibleHitboxes : BloonsTD6Mod
                 var hName = MapAreaId + "_" + i;
                 var points = pointArray.Select(point => new Vector2(point.x, point.y)).ToList();
                 var hitbox = Create2DMesh(displayRoot.gameObject, hName, points, color);
-                
+
                 if (hitbox != null)
                 {
                     activeIdentifiers.Add(hName);
@@ -310,7 +285,7 @@ public class VisibleHitboxes : BloonsTD6Mod
                 }
             }
         }
-        
+
         var difList = _prevIdentifiers.Except(activeIdentifiers).ToList();
         RemoveUnusedHitboxes(difList);
         _prevIdentifiers = activeIdentifiers.Duplicate();
@@ -393,7 +368,7 @@ public class VisibleHitboxes : BloonsTD6Mod
 
         meshObject.AddComponent<MeshRenderer>();
         meshObject.GetComponent<MeshRenderer>().material = GetMaterial("ShaderTransparent");
-        meshObject.GetComponent<MeshRenderer>().material.color = new Color(color.r, color.g, color.b, SaveSystem.Transparency);
+        meshObject.GetComponent<MeshRenderer>().material.color = new Color(color.r, color.g, color.b, Settings.GetTransparency());
         meshObject.AddComponent<MeshFilter>();
         meshObject.GetComponent<MeshFilter>().mesh = mesh;
         return meshObject;
@@ -421,7 +396,7 @@ public class VisibleHitboxes : BloonsTD6Mod
             {
                 color = spriteRenderer.color;
             }
-            spriteRenderer.color = new Color(color.r, color.g, color.b, SaveSystem.Transparency);
+            spriteRenderer.color = new Color(color.r, color.g, color.b, Settings.GetTransparency());
         }
         else if (hitbox.HasComponent<LineRenderer>())
         {
@@ -430,7 +405,7 @@ public class VisibleHitboxes : BloonsTD6Mod
             {
                 color = lineRenderer.startColor;
             }
-            color = new Color(color.r, color.g, color.b, SaveSystem.Transparency);
+            color = new Color(color.r, color.g, color.b, Settings.GetTransparency());
             lineRenderer.SetColors(color, color);
         }
         else if (hitbox.HasComponent<MeshRenderer>())
@@ -440,7 +415,7 @@ public class VisibleHitboxes : BloonsTD6Mod
             {
                 color = meshRenderer.material.color;
             }
-            meshRenderer.material.color = new Color(color.r, color.g, color.b, SaveSystem.Transparency);
+            meshRenderer.material.color = new Color(color.r, color.g, color.b, Settings.GetTransparency());
         }
     }
 
@@ -487,7 +462,7 @@ public class VisibleHitboxes : BloonsTD6Mod
             radius, 
             radius);
         var spriteRenderer = circle.GetComponent<SpriteRenderer>();
-        spriteRenderer.color = new Color(color.r, color.g, color.b, SaveSystem.Transparency);
+        spriteRenderer.color = new Color(color.r, color.g, color.b, Settings.GetTransparency());
         spriteRenderer.sortingLayerName = "Bloons";
         return circle;
     }
@@ -513,11 +488,10 @@ public class VisibleHitboxes : BloonsTD6Mod
                 footprintModel.yWidth * scaleModifier, 
                 footprintModel.yWidth * scaleModifier);
             var spriteRenderer = square.GetComponent<SpriteRenderer>();
-            spriteRenderer.color = new Color(color.r, color.g, color.b, SaveSystem.Transparency);
+            spriteRenderer.color = new Color(color.r, color.g, color.b, Settings.GetTransparency());
             spriteRenderer.sortingLayerName = "Bloons";
             return square;
         }
-
         else
         {
             var footprintModel = footprint.Cast<CircleFootprintModel>();
@@ -531,7 +505,7 @@ public class VisibleHitboxes : BloonsTD6Mod
                 radius * scaleModifier, 
                 radius * scaleModifier);
             var spriteRenderer = circle.GetComponent<SpriteRenderer>();
-            spriteRenderer.color = new Color(color.r, color.g, color.b, SaveSystem.Transparency);
+            spriteRenderer.color = new Color(color.r, color.g, color.b, Settings.GetTransparency());
             spriteRenderer.sortingLayerName = "Bloons";
             return circle;
         }
