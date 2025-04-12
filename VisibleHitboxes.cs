@@ -27,66 +27,50 @@ namespace VisibleHitboxes;
 
 public class VisibleHitboxes : BloonsTD6Mod
 {
-    private bool _isInGame;
+    private const string HITBOX_OBJECT_NAME = "Hitbox_";
+    private const float CIRCLE_SIZE_MULTIPLIER = 2f;
+    private const int ID_HELD_TOWER_HITBOX = -1;
+    private const int ID_LINE_RENDERER = -2;
+    private const int ID_MAP_AREA = -3;
 
-    private const string HitboxObjectName = "Hitbox_";
-    private const float CircleSizeMultiplier = 2f;
-    private const int HeldTowerHitboxId = -1;
-    private const int LineRendererId = -2;
-    private const int MapAreaId = -3;
+    private static readonly Dictionary<string, GameObject> hitboxes = [];
+    private static List<HandledProjectile> handledProjectiles = [];
+    private static List<string> previousIdentifiers = [];
 
-    private static List<string> _prevIdentifiers = new();
-
-    private static readonly Dictionary<string, GameObject> HitboxDictionary = new();
+    private bool isInGame;
 
     public override void OnMatchStart()
     {
         base.OnMatchStart();
-        _isInGame = true;
+        isInGame = true;
     }
 
     public override void OnMatchEnd()
     {
         base.OnMatchEnd();
-        _isInGame = false;
-        var inactiveIdentifiers = _prevIdentifiers;
-        RemoveUnusedHitboxes(inactiveIdentifiers);
+        isInGame = false;
+        RemoveUnusedHitboxes(previousIdentifiers);
     }
-
-    private static List<HandledProjectile> _handledProjectiles = new();
 
     public override void OnProjectileCreated(Projectile projectile, Entity entity, Model modelToUse)
     {
-        var projectileModel = modelToUse.Cast<ProjectileModel>();
-        var isInvisible = !(projectileModel.display.guidRef != "" || Enumerable.Any(projectileModel.behaviors, behavior => behavior.TypeName() == "SetSpriteFromPierceModel"));
-
-        _handledProjectiles.Add(new HandledProjectile
-        {
-            IsInvisible = isInvisible,
-            Projectile = projectile,
-        });
-    }
-    
-    public class HandledProjectile
-    { 
-        public bool IsInvisible { get; init; }
-        public Projectile? Projectile { get; init; }
+        handledProjectiles.Add(new HandledProjectile(projectile, modelToUse.Cast<ProjectileModel>()));
     }
 
     public override void OnTowerUpgraded(Tower tower, string upgradeName, TowerModel newBaseTowerModel)
     {
         base.OnTowerUpgraded(tower, upgradeName, newBaseTowerModel);
-        HitboxDictionary.Remove(tower.Id.Id.ToString());
+        hitboxes.Remove(tower.Id.Id.ToString());
     }
 
     public override void OnUpdate()
     {
-        if (!_isInGame) return;
+        if (!isInGame) return;
 
         var activeIdentifiers = new List<string>();
         var displayRoot = Game.instance.GetDisplayFactory().DisplayRoot;
 
-        // Handle Toggle All hotkey
+        #region Toggle Hotkeys
         if (Settings.ToggleAll.JustPressed())
         {
             bool newState = !Settings.IsEverythingEnabled();
@@ -115,7 +99,9 @@ public class VisibleHitboxes : BloonsTD6Mod
             Settings.UseTransparency.SetValue(!Settings.UseTransparency);
             UpdateAllHitboxes();
         }
+        #endregion
 
+        #region UpdateHitboxes
         // Handle tower hitboxes
         if (Settings.ShowTowers)
         {
@@ -130,7 +116,7 @@ public class VisibleHitboxes : BloonsTD6Mod
                 var hitbox = CreateTowerHitbox(simDisplay, HitboxColors.Tower, footprint, towerId.ToString());
                 if (hitbox == null) continue;
                 activeIdentifiers.Add(tower.Id.Id.ToString());
-                HitboxDictionary.TryAdd(towerId.ToString(), hitbox);
+                hitboxes.TryAdd(towerId.ToString(), hitbox);
             }
 
             // Held tower hitbox
@@ -147,11 +133,11 @@ public class VisibleHitboxes : BloonsTD6Mod
                 var inputId = InGame.Bridge.GetInputId();
                 var canPlace = InGame.Bridge.CanPlaceTowerAt(towerPos, placementModel, inputId, placementTowerId);
                 var color = canPlace ? HitboxColors.Tower : HitboxColors.InvalidPosition;
-                var hitbox = CreateTowerHitbox(simDisplay, color, footprint, HeldTowerHitboxId.ToString());
+                var hitbox = CreateTowerHitbox(simDisplay, color, footprint, ID_HELD_TOWER_HITBOX.ToString());
                 if (hitbox != null)
                 {
-                    activeIdentifiers.Add(HeldTowerHitboxId.ToString());
-                    HitboxDictionary.TryAdd(HeldTowerHitboxId.ToString(), hitbox);
+                    activeIdentifiers.Add(ID_HELD_TOWER_HITBOX.ToString());
+                    hitboxes.TryAdd(ID_HELD_TOWER_HITBOX.ToString(), hitbox);
                     UpdateHitbox(hitbox, simDisplay.position, color);
                 }
             }
@@ -160,15 +146,15 @@ public class VisibleHitboxes : BloonsTD6Mod
         // Handle projectile hitboxes
         if (Settings.ShowProjectiles)
         {
-            foreach (var handledProjectile in _handledProjectiles)
+            foreach (var handledProjectile in handledProjectiles)
             {
-                var projectile = handledProjectile.Projectile;
+                var projectile = handledProjectile.projectile;
                 var projectileId = projectile!.Id.Id;
                 var radius = projectile.Radius;
 
                 if (projectile.isDestroyed) continue;
 
-                if (handledProjectile.IsInvisible)
+                if (handledProjectile.isInvisible)
                 {
                     var projectilePos = projectile.Display.node.position.data;
                     var displayPos = new Vector3(projectilePos.x, 0f, -projectilePos.y);
@@ -176,7 +162,7 @@ public class VisibleHitboxes : BloonsTD6Mod
                     if (invhitbox != null)
                     {
                         activeIdentifiers.Add(projectileId.ToString());
-                        HitboxDictionary.TryAdd(projectileId.ToString(), invhitbox);
+                        hitboxes.TryAdd(projectileId.ToString(), invhitbox);
                         UpdateHitbox(invhitbox, displayPos, HitboxColors.InvisibleProjectile);
                     }
                     continue;
@@ -190,11 +176,11 @@ public class VisibleHitboxes : BloonsTD6Mod
                 if (hitbox != null)
                 {
                     activeIdentifiers.Add(projectileId.ToString());
-                    HitboxDictionary.TryAdd(projectileId.ToString(), hitbox);
+                    hitboxes.TryAdd(projectileId.ToString(), hitbox);
                 }
 
-                _handledProjectiles = _handledProjectiles
-                    .Where(hProjectile => !hProjectile.Projectile!.IsDestroyed).ToList();
+                handledProjectiles = handledProjectiles
+                    .Where(hProjectile => !hProjectile.projectile!.IsDestroyed).ToList();
             }
         }
 
@@ -220,7 +206,7 @@ public class VisibleHitboxes : BloonsTD6Mod
                         if (hitbox != null)
                         {
                             activeIdentifiers.Add(hName);
-                            HitboxDictionary.TryAdd(hName, hitbox);
+                            hitboxes.TryAdd(hName, hitbox);
                             UpdateHitbox(hitbox, hitbox.transform.position, HitboxColors.Bloon);
                         }
                         count++;
@@ -233,7 +219,7 @@ public class VisibleHitboxes : BloonsTD6Mod
                     if (hitbox != null)
                     {
                         activeIdentifiers.Add(bloonId.ToString());
-                        HitboxDictionary.TryAdd(bloonId.ToString(), hitbox);
+                        hitboxes.TryAdd(bloonId.ToString(), hitbox);
                         hitbox.transform.rotation = new Quaternion(0f, 0f, 0f, 0f);
                     }
                 }
@@ -246,12 +232,12 @@ public class VisibleHitboxes : BloonsTD6Mod
             var index = 0;
             foreach (var path in InGame.instance.GetMap().mapModel.paths)
             {
-                var hName = LineRendererId + "_" + index;
+                var hName = ID_LINE_RENDERER + "_" + index;
                 var gmLineRenderer = CreateLineRenderer(displayRoot.gameObject, hName, path.points, HitboxColors.Path);
                 if (gmLineRenderer != null)
                 {
                     activeIdentifiers.Add(hName);
-                    HitboxDictionary.TryAdd(hName, gmLineRenderer);
+                    hitboxes.TryAdd(hName, gmLineRenderer);
                 }
                 index++;
             }
@@ -263,40 +249,168 @@ public class VisibleHitboxes : BloonsTD6Mod
                 if (areaModel.type is not (AreaType.track or AreaType.unplaceable)) continue;
                 var color = areaModel.type == AreaType.track ? HitboxColors.TrackArea : HitboxColors.UnplacableArea;
                 var pointArray = areaModel.polygon.points.ToList();
-                var hName = MapAreaId + "_" + i;
+                var hName = ID_MAP_AREA + "_" + i;
                 var points = pointArray.Select(point => new Vector2(point.x, point.y)).ToList();
                 var hitbox = Create2DMesh(displayRoot.gameObject, hName, points, color);
 
                 if (hitbox != null)
                 {
                     activeIdentifiers.Add(hName);
-                    HitboxDictionary.TryAdd(hName, hitbox);
+                    hitboxes.TryAdd(hName, hitbox);
                 }
             }
         }
+        #endregion
 
-        var difList = _prevIdentifiers.Except(activeIdentifiers).ToList();
-        RemoveUnusedHitboxes(difList);
-        _prevIdentifiers = activeIdentifiers.Duplicate();
+        var inactiveIdentifiers = previousIdentifiers.Except(activeIdentifiers).ToList();
+        RemoveUnusedHitboxes(inactiveIdentifiers);
+        previousIdentifiers = activeIdentifiers.Duplicate();
+    }
+
+    private static void UpdateHitbox(GameObject hitbox, Vector3 newPosition, Color color = default)
+    {
+        hitbox.transform.position = newPosition;
+        if (hitbox.HasComponent<SpriteRenderer>())
+        {
+            var spriteRenderer = hitbox.GetComponent<SpriteRenderer>();
+            if (color == default)
+            {
+                color = spriteRenderer.color;
+            }
+            spriteRenderer.color = new Color(color.r, color.g, color.b, Settings.GetTransparency());
+        }
+        else if (hitbox.HasComponent<LineRenderer>())
+        {
+            var lineRenderer = hitbox.GetComponent<LineRenderer>();
+            if (color == default)
+            {
+                color = lineRenderer.startColor;
+            }
+            color = new Color(color.r, color.g, color.b, Settings.GetTransparency());
+            lineRenderer.SetColors(color, color);
+        }
+        else if (hitbox.HasComponent<MeshRenderer>())
+        {
+            var meshRenderer = hitbox.GetComponent<MeshRenderer>();
+            if (color == default)
+            {
+                color = meshRenderer.material.color;
+            }
+            meshRenderer.material.color = new Color(color.r, color.g, color.b, Settings.GetTransparency());
+        }
     }
 
     private static void UpdateAllHitboxes()
     {
-        foreach (var hitbox in HitboxDictionary.Values.Where(hitbox => hitbox != null))
+        foreach (var hitbox in hitboxes.Values.Where(hitbox => hitbox != null))
         {
             UpdateHitbox(hitbox, hitbox.transform.position);
+        }
+    }
+
+    private static void RemoveUnusedHitboxes(List<string> inactiveIdentifiers)
+    {
+        foreach (var identifier in inactiveIdentifiers)
+        {
+            var valueExists = hitboxes.TryGetValue(identifier, out var value);
+            if (!valueExists) continue;
+            try
+            {
+                hitboxes.Remove(identifier);
+            }
+            catch (Exception e)
+            {
+                MelonLogger.Error(e);
+            }
+            UnityEngine.Object.Destroy(value);
+        }
+    }
+
+    private static GameObject? CreateCircularHitbox(Transform simDisplay, Color color, float radius, Vector3 offset, string name)
+    {
+        if (hitboxes.TryGetValue(name, out var gameObject))
+        {
+            if (gameObject != null && gameObject.transform.parent.gameObject.active) return gameObject;
+            return null;
+        }
+        name = HITBOX_OBJECT_NAME + name;
+
+        if (radius <= 0)
+        {  // Some projectiles use pixel-perfect hitboxes. This makes them visible at the cost of accuracy.
+            radius = 1f;
+            color = HitboxColors.ModifierProjectile;
+        }
+
+        radius *= CIRCLE_SIZE_MULTIPLIER;
+
+        var circle = GetGameObject("Circle");
+        circle.name = name;
+        circle.transform.parent = simDisplay;
+        circle.transform.localPosition = offset;
+        circle.transform.localScale = new Vector3(
+            radius,
+            radius,
+            radius);
+        var spriteRenderer = circle.GetComponent<SpriteRenderer>();
+        spriteRenderer.color = new Color(color.r, color.g, color.b, Settings.GetTransparency());
+        spriteRenderer.sortingLayerName = "Bloons";
+        return circle;
+    }
+
+    private static GameObject? CreateTowerHitbox(Transform simDisplay, Color color, Object footprint, string name)
+    {
+        if (hitboxes.TryGetValue(name, out var gameObject))
+        {
+            if (gameObject != null && gameObject.transform.parent.gameObject.active) return gameObject;
+            return null;
+        }
+        name = HITBOX_OBJECT_NAME + name;
+        var scaleModifier = 1f / simDisplay.localScale.x;
+
+        if (footprint.IsType<RectangleFootprintModel>())
+        {
+            var footprintModel = footprint.Cast<RectangleFootprintModel>();
+            var square = GetGameObject("Square");
+            square.name = name;
+            square.transform.parent = simDisplay;
+            square.transform.localPosition = Vector3.zero;
+            square.transform.localScale = new Vector3(
+                footprintModel.xWidth * scaleModifier,
+                footprintModel.yWidth * scaleModifier,
+                footprintModel.yWidth * scaleModifier);
+            var spriteRenderer = square.GetComponent<SpriteRenderer>();
+            spriteRenderer.color = new Color(color.r, color.g, color.b, Settings.GetTransparency());
+            spriteRenderer.sortingLayerName = "Bloons";
+            return square;
+        }
+        else
+        {
+            var footprintModel = footprint.Cast<CircleFootprintModel>();
+            var circle = GetGameObject("Circle");
+            var radius = footprintModel.radius * CIRCLE_SIZE_MULTIPLIER;
+            circle.name = name;
+            circle.transform.parent = simDisplay;
+            circle.transform.localPosition = Vector3.zero;
+            circle.transform.localScale = new Vector3(
+                radius * scaleModifier,
+                radius * scaleModifier,
+                radius * scaleModifier);
+            var spriteRenderer = circle.GetComponent<SpriteRenderer>();
+            spriteRenderer.color = new Color(color.r, color.g, color.b, Settings.GetTransparency());
+            spriteRenderer.sortingLayerName = "Bloons";
+            return circle;
         }
     }
 
     private static GameObject CreateLineRenderer(GameObject displayRoot, string name, Il2CppReferenceArray<PointInfo> path, Color color)
     {
         if (path == null) throw new ArgumentNullException(nameof(path));
-        if (HitboxDictionary.TryGetValue(name, out var gameObject))
+        if (hitboxes.TryGetValue(name, out var gameObject))
         {
             if (gameObject != null) return gameObject;
         }
         
-        name = HitboxObjectName + name;
+        name = HITBOX_OBJECT_NAME + name;
 
         var renderer = new GameObject(name)
         {
@@ -325,12 +439,12 @@ public class VisibleHitboxes : BloonsTD6Mod
 
     private static GameObject Create2DMesh(GameObject displayRoot, string name, List<Vector2> points, Color color)
     {
-        if (HitboxDictionary.TryGetValue(name, out var gameObject))
+        if (hitboxes.TryGetValue(name, out var gameObject))
         {
             if (gameObject != null) return gameObject;
         }
         
-        name = HitboxObjectName + name;
+        name = HITBOX_OBJECT_NAME + name;
 
         var meshObject = new GameObject(name)
         {
@@ -373,130 +487,5 @@ public class VisibleHitboxes : BloonsTD6Mod
     {
         var bundle = ModContent.GetBundle(ModHelper.GetMod("VisibleHitboxes"), "debugmat");
         return bundle.LoadAsset(name).Cast<Material>().Duplicate();
-    }
-    
-    private static void UpdateHitbox(GameObject hitbox, Vector3 newPosition, Color color = default)
-    {
-        hitbox.transform.position = newPosition;
-        if (hitbox.HasComponent<SpriteRenderer>())
-        {
-            var spriteRenderer = hitbox.GetComponent<SpriteRenderer>();
-            if (color == default)
-            {
-                color = spriteRenderer.color;
-            }
-            spriteRenderer.color = new Color(color.r, color.g, color.b, Settings.GetTransparency());
-        }
-        else if (hitbox.HasComponent<LineRenderer>())
-        {
-            var lineRenderer = hitbox.GetComponent<LineRenderer>();
-            if (color == default)
-            {
-                color = lineRenderer.startColor;
-            }
-            color = new Color(color.r, color.g, color.b, Settings.GetTransparency());
-            lineRenderer.SetColors(color, color);
-        }
-        else if (hitbox.HasComponent<MeshRenderer>())
-        {
-            var meshRenderer = hitbox.GetComponent<MeshRenderer>();
-            if (color == default)
-            {
-                color = meshRenderer.material.color;
-            }
-            meshRenderer.material.color = new Color(color.r, color.g, color.b, Settings.GetTransparency());
-        }
-    }
-
-    private static void RemoveUnusedHitboxes(List<string> inactiveIdentifiers)
-    {
-        foreach (var identifier in inactiveIdentifiers)
-        {
-            var valueExists = HitboxDictionary.TryGetValue(identifier, out var value);
-            if (!valueExists) continue;
-            try
-            {
-                HitboxDictionary.Remove(identifier);
-            }
-            catch (Exception e)
-            {
-                MelonLogger.Error(e);
-            }
-            UnityEngine.Object.Destroy(value);
-        }
-    }
-
-    private static GameObject? CreateCircularHitbox(Transform simDisplay, Color color, float radius, Vector3 offset, string name)
-    {
-        if (HitboxDictionary.TryGetValue(name, out var gameObject))
-        {
-            if (gameObject != null && gameObject.transform.parent.gameObject.active) return gameObject;
-            return null;
-        }
-        name = HitboxObjectName + name;
-        
-        if (radius <= 0) {  // Some projectiles use pixel-perfect hitboxes. This makes them visible at the cost of accuracy.
-            radius = 1f;
-            color = HitboxColors.ModifierProjectile;
-        }
-
-        radius *= CircleSizeMultiplier;
-        
-        var circle = GetGameObject("Circle");
-        circle.name = name;
-        circle.transform.parent = simDisplay;
-        circle.transform.localPosition = offset;
-        circle.transform.localScale = new Vector3(
-            radius, 
-            radius, 
-            radius);
-        var spriteRenderer = circle.GetComponent<SpriteRenderer>();
-        spriteRenderer.color = new Color(color.r, color.g, color.b, Settings.GetTransparency());
-        spriteRenderer.sortingLayerName = "Bloons";
-        return circle;
-    }
-    private static GameObject? CreateTowerHitbox(Transform simDisplay, Color color, Object footprint, string name)
-    {
-        if (HitboxDictionary.TryGetValue(name, out var gameObject))
-        {
-            if (gameObject != null && gameObject.transform.parent.gameObject.active) return gameObject;
-            return null;
-        }
-        name = HitboxObjectName + name;
-        var scaleModifier = 1f / simDisplay.localScale.x;
-
-        if (footprint.IsType<RectangleFootprintModel>())
-        {
-            var footprintModel = footprint.Cast<RectangleFootprintModel>();
-            var square = GetGameObject("Square");
-            square.name = name;
-            square.transform.parent = simDisplay;
-            square.transform.localPosition = Vector3.zero;
-            square.transform.localScale = new Vector3(
-                footprintModel.xWidth * scaleModifier,
-                footprintModel.yWidth * scaleModifier, 
-                footprintModel.yWidth * scaleModifier);
-            var spriteRenderer = square.GetComponent<SpriteRenderer>();
-            spriteRenderer.color = new Color(color.r, color.g, color.b, Settings.GetTransparency());
-            spriteRenderer.sortingLayerName = "Bloons";
-            return square;
-        }
-        else
-        {
-            var footprintModel = footprint.Cast<CircleFootprintModel>();
-            var circle = GetGameObject("Circle");
-            var radius = footprintModel.radius * CircleSizeMultiplier;
-            circle.name = name;
-            circle.transform.parent = simDisplay;
-            circle.transform.localPosition = Vector3.zero;
-            circle.transform.localScale = new Vector3(
-                radius * scaleModifier, 
-                radius * scaleModifier, 
-                radius * scaleModifier);
-            var spriteRenderer = circle.GetComponent<SpriteRenderer>();
-            spriteRenderer.color = new Color(color.r, color.g, color.b, Settings.GetTransparency());
-            spriteRenderer.sortingLayerName = "Bloons";
-            return circle;
-        }
     }
 }
