@@ -29,19 +29,8 @@ public class VisibleHitboxes : BloonsTD6Mod
 {
     private bool _isInGame;
 
-    private const float CircleSizeMultiplier = 2f;
     private const string HitboxObjectName = "Hitbox_";
-    
-    private static readonly Color TowerColor = new(1f, 1f, 0.85f);
-    private static readonly Color ProjectileColor = new(1f, 0f, 0f);
-    private static readonly Color InvalidPositionColor = new(1f, 0f, 0f);
-    private static readonly Color InvisibleProjectileColor = new(1f, 0.5f, 0.60f);
-    private static readonly Color ModifierProjectileColor = new(1f, 0.20f, 0.60f);
-    private static readonly Color BloonColor = new(1f, 1f, 0f);
-    private static readonly Color PathColor = new(0.9f, 0.95f, 0.85f);
-    private static readonly Color TrackAreaColor = new(0.40f, 0.40f, 0.30f);
-    private static readonly Color UnplacableAreaColor = new(0.60f, 0f, 0f);
-
+    private const float CircleSizeMultiplier = 2f;
     private const int HeldTowerHitboxId = -1;
     private const int LineRendererId = -2;
     private const int MapAreaId = -3;
@@ -138,7 +127,7 @@ public class VisibleHitboxes : BloonsTD6Mod
                 if (!simDisplay.gameObject.active) continue;
                 var footprint = tower.Def.footprint;
                 var towerId = tower.Id.Id;
-                var hitbox = CreateTowerHitbox(simDisplay, TowerColor, footprint, towerId.ToString());
+                var hitbox = CreateTowerHitbox(simDisplay, HitboxColors.Tower, footprint, towerId.ToString());
                 if (hitbox == null) continue;
                 activeIdentifiers.Add(tower.Id.Id.ToString());
                 HitboxDictionary.TryAdd(towerId.ToString(), hitbox);
@@ -157,7 +146,7 @@ public class VisibleHitboxes : BloonsTD6Mod
                 var footprint = placementModel.footprint;
                 var inputId = InGame.Bridge.GetInputId();
                 var canPlace = InGame.Bridge.CanPlaceTowerAt(towerPos, placementModel, inputId, placementTowerId);
-                var color = canPlace ? TowerColor : InvalidPositionColor;
+                var color = canPlace ? HitboxColors.Tower : HitboxColors.InvalidPosition;
                 var hitbox = CreateTowerHitbox(simDisplay, color, footprint, HeldTowerHitboxId.ToString());
                 if (hitbox != null)
                 {
@@ -183,12 +172,12 @@ public class VisibleHitboxes : BloonsTD6Mod
                 {
                     var projectilePos = projectile.Display.node.position.data;
                     var displayPos = new Vector3(projectilePos.x, 0f, -projectilePos.y);
-                    var invhitbox = CreateCircularHitbox(displayRoot, InvisibleProjectileColor, radius, displayPos, projectileId.ToString());
+                    var invhitbox = CreateCircularHitbox(displayRoot, HitboxColors.InvisibleProjectile, radius, displayPos, projectileId.ToString());
                     if (invhitbox != null)
                     {
                         activeIdentifiers.Add(projectileId.ToString());
                         HitboxDictionary.TryAdd(projectileId.ToString(), invhitbox);
-                        UpdateHitbox(invhitbox, displayPos, InvisibleProjectileColor);
+                        UpdateHitbox(invhitbox, displayPos, HitboxColors.InvisibleProjectile);
                     }
                     continue;
                 }
@@ -197,7 +186,7 @@ public class VisibleHitboxes : BloonsTD6Mod
 
                 var simDisplay = projectile.GetUnityDisplayNode().gameObject.transform;
                 if (!simDisplay.gameObject.active) continue;
-                var hitbox = CreateCircularHitbox(simDisplay, ProjectileColor, radius, Vector3.zero, projectileId.ToString());
+                var hitbox = CreateCircularHitbox(simDisplay, HitboxColors.Projectile, radius, Vector3.zero, projectileId.ToString());
                 if (hitbox != null)
                 {
                     activeIdentifiers.Add(projectileId.ToString());
@@ -227,12 +216,12 @@ public class VisibleHitboxes : BloonsTD6Mod
                         var offset = new Vector3(collision.offset.x, 0f, collision.offset.y);
                         var radius = collision.radius;
                         var hName = bloonId + "_" + count;
-                        var hitbox = CreateCircularHitbox(simDisplay, BloonColor, radius, offset, hName);
+                        var hitbox = CreateCircularHitbox(simDisplay, HitboxColors.Bloon, radius, offset, hName);
                         if (hitbox != null)
                         {
                             activeIdentifiers.Add(hName);
                             HitboxDictionary.TryAdd(hName, hitbox);
-                            UpdateHitbox(hitbox, hitbox.transform.position, BloonColor);
+                            UpdateHitbox(hitbox, hitbox.transform.position, HitboxColors.Bloon);
                         }
                         count++;
                     }
@@ -240,7 +229,7 @@ public class VisibleHitboxes : BloonsTD6Mod
                 else // Single collision bloons
                 {
                     var radius = bloon.GetSimBloon().Radius;
-                    var hitbox = CreateCircularHitbox(simDisplay, BloonColor, radius, Vector3.zero, bloonId.ToString());
+                    var hitbox = CreateCircularHitbox(simDisplay, HitboxColors.Bloon, radius, Vector3.zero, bloonId.ToString());
                     if (hitbox != null)
                     {
                         activeIdentifiers.Add(bloonId.ToString());
@@ -258,7 +247,7 @@ public class VisibleHitboxes : BloonsTD6Mod
             foreach (var path in InGame.instance.GetMap().mapModel.paths)
             {
                 var hName = LineRendererId + "_" + index;
-                var gmLineRenderer = CreateLineRenderer(displayRoot.gameObject, hName, path.points, PathColor);
+                var gmLineRenderer = CreateLineRenderer(displayRoot.gameObject, hName, path.points, HitboxColors.Path);
                 if (gmLineRenderer != null)
                 {
                     activeIdentifiers.Add(hName);
@@ -272,7 +261,7 @@ public class VisibleHitboxes : BloonsTD6Mod
             {
                 var areaModel = areas[i];
                 if (areaModel.type is not (AreaType.track or AreaType.unplaceable)) continue;
-                var color = areaModel.type == AreaType.track ? TrackAreaColor : UnplacableAreaColor;
+                var color = areaModel.type == AreaType.track ? HitboxColors.TrackArea : HitboxColors.UnplacableArea;
                 var pointArray = areaModel.polygon.points.ToList();
                 var hName = MapAreaId + "_" + i;
                 var points = pointArray.Select(point => new Vector2(point.x, point.y)).ToList();
@@ -448,7 +437,7 @@ public class VisibleHitboxes : BloonsTD6Mod
         
         if (radius <= 0) {  // Some projectiles use pixel-perfect hitboxes. This makes them visible at the cost of accuracy.
             radius = 1f;
-            color = ModifierProjectileColor;
+            color = HitboxColors.ModifierProjectile;
         }
 
         radius *= CircleSizeMultiplier;
