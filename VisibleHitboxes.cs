@@ -19,6 +19,7 @@ using MelonLoader;
 using UnityEngine;
 using VisibleHitboxes;
 using Object = Il2CppSystem.Object;
+using UnityEngine.SceneManagement;
 
 [assembly: MelonInfo(typeof(VisibleHitboxes.VisibleHitboxes), ModHelperData.Name, ModHelperData.Version, ModHelperData.RepoOwner)]
 [assembly: MelonGame("Ninja Kiwi", "BloonsTD6")]
@@ -43,6 +44,15 @@ public class VisibleHitboxes : BloonsTD6Mod
     {
         base.OnMatchStart();
         isInGame = true;
+
+        Camera cam = InGame.instance.sceneCamera;
+        if (cam != null)
+        {
+            cam.clearFlags = CameraClearFlags.SolidColor;
+            cam.backgroundColor = new Color(0.1f, 0.1f, 0.1f);
+        }
+
+        ToggleMapRendering(Settings.RenderMap);
     }
 
     public override void OnMatchEnd()
@@ -69,6 +79,17 @@ public class VisibleHitboxes : BloonsTD6Mod
 
         var activeIdentifiers = new List<string>();
         var displayRoot = Game.instance.GetDisplayFactory().DisplayRoot;
+
+        if (Settings.DebugHotkey.JustPressed())
+        {
+            Debug();
+        }
+
+        if (Settings.ToggleMapRenderingHotkey.JustPressed())
+        {
+            Settings.RenderMap.SetValue(!Settings.RenderMap);
+            ToggleMapRendering(Settings.RenderMap);
+        }
 
         #region Toggle Hotkeys
         if (Settings.ToggleAll.JustPressed())
@@ -101,7 +122,7 @@ public class VisibleHitboxes : BloonsTD6Mod
         }
         #endregion
 
-        #region UpdateHitboxes
+        #region Update Hitboxes
         // Handle tower hitboxes
         if (Settings.ShowTowers)
         {
@@ -229,34 +250,84 @@ public class VisibleHitboxes : BloonsTD6Mod
         // Handle map collision hitboxes
         if (Settings.ShowMapCollision)
         {
-            var index = 0;
-            foreach (var path in InGame.instance.GetMap().mapModel.paths)
-            {
-                var hName = ID_LINE_RENDERER + "_" + index;
-                var gmLineRenderer = CreateLineRenderer(displayRoot.gameObject, hName, path.points, HitboxColors.Path);
-                if (gmLineRenderer != null)
-                {
-                    activeIdentifiers.Add(hName);
-                    hitboxes.TryAdd(hName, gmLineRenderer);
-                }
-                index++;
-            }
+            // path lines
+            //var index = 0;
+            //foreach (var path in InGame.instance.GetMap().mapModel.paths)
+            //{
+            //    var hName = ID_LINE_RENDERER + "_" + index;
+            //    var gmLineRenderer = CreateLineRenderer(displayRoot.gameObject, hName, path.points, HitboxColors.Path);
+            //    if (gmLineRenderer != null)
+            //    {
+            //        activeIdentifiers.Add(hName);
+            //        hitboxes.TryAdd(hName, gmLineRenderer);
+            //    }
+            //    index++;
+            //}
 
+            // areas
+            //var areas = InGame.instance.GetMap().mapModel.areas;
+            //for (var i = 0; i < areas.Count; i++)
+            //{
+            //    var areaModel = areas[i];
+
+            //    if ((int)areaModel.type < 0 || (int)areaModel.type >= Enum.GetValues(typeof(AreaType)).Length)
+            //        continue;
+
+            //    if (areaModel.type == AreaType.land) continue;
+
+            //    var color = HitboxColors.GetAreaColor(areaModel.type);
+            //    var pointArray = areaModel.polygon.points.ToList();
+            //    var hName = ID_MAP_AREA + "_" + i;
+            //    var points = pointArray.Select(point => new Vector2(point.x, point.y)).ToList();
+            //    var hitbox = Create2DMesh(displayRoot.gameObject, hName, points, color);
+
+            //    if (hitbox != null)
+            //    {
+            //        activeIdentifiers.Add(hName);
+            //        hitboxes.TryAdd(hName, hitbox);
+            //    }
+            //}
+
+            // areas
             var areas = InGame.instance.GetMap().mapModel.areas;
             for (var i = 0; i < areas.Count; i++)
             {
                 var areaModel = areas[i];
-                if (areaModel.type is not (AreaType.track or AreaType.unplaceable)) continue;
-                var color = areaModel.type == AreaType.track ? HitboxColors.TrackArea : HitboxColors.UnplacableArea;
+                if ((int)areaModel.type < 0 || (int)areaModel.type >= Enum.GetValues(typeof(AreaType)).Length)
+                    continue;
+                // if (areaModel.type == AreaType.land) continue;
+                var color = HitboxColors.GetAreaColor(areaModel.type);
+                var areaHeight = areaModel.height;
+
+                // Create outline for main polygon
                 var pointArray = areaModel.polygon.points.ToList();
                 var hName = ID_MAP_AREA + "_" + i;
                 var points = pointArray.Select(point => new Vector2(point.x, point.y)).ToList();
-                var hitbox = Create2DMesh(displayRoot.gameObject, hName, points, color);
 
+                var hitbox = CreateAreaOutlineRenderer(displayRoot.gameObject, hName, points, color, areaHeight);
                 if (hitbox != null)
                 {
                     activeIdentifiers.Add(hName);
                     hitboxes.TryAdd(hName, hitbox);
+                }
+
+                // Create outlines for each hole
+                if (areaModel.holes != null)
+                {
+                    for (var j = 0; j < areaModel.holes.Length; j++)
+                    {
+                        var hole = areaModel.holes[j];
+                        var holePointArray = hole.points.ToList();
+                        var holeHName = ID_MAP_AREA + "_" + i + "_hole_" + j;
+                        var holePoints = holePointArray.Select(point => new Vector2(point.x, point.y)).ToList();
+
+                        var holeHitbox = CreateAreaOutlineRenderer(displayRoot.gameObject, holeHName, holePoints, color, areaHeight);
+                        if (holeHitbox != null)
+                        {
+                            activeIdentifiers.Add(holeHName);
+                            hitboxes.TryAdd(holeHName, holeHitbox);
+                        }
+                    }
                 }
             }
         }
@@ -477,6 +548,52 @@ public class VisibleHitboxes : BloonsTD6Mod
         return meshObject;
     }
 
+    private static GameObject CreateAreaOutlineRenderer(GameObject displayRoot, string name, List<Vector2> points, Color color, float height)
+    {
+        if (hitboxes.TryGetValue(name, out var gameObject))
+        {
+            if (gameObject != null) return gameObject;
+        }
+
+        name = HITBOX_OBJECT_NAME + name;
+
+        var renderer = new GameObject(name)
+        {
+            transform =
+        {
+            parent = displayRoot.transform
+        }
+        };
+
+        renderer.AddComponent<LineRenderer>();
+        var lineRenderer = renderer.GetComponent<LineRenderer>();
+        lineRenderer.material = GetMaterial("ShaderTransparent");
+        lineRenderer.startColor = new Color(color.r, color.g, color.b, Settings.GetTransparency());
+        lineRenderer.endColor = new Color(color.r, color.g, color.b, Settings.GetTransparency());
+        lineRenderer.startWidth = 1f; // Adjust line width as needed
+        lineRenderer.endWidth = 1f;
+        lineRenderer.loop = true; // Connect the last point to the first
+
+        // Convert points to Vector3 and set positions
+        var convertedArray = new Vector3[points.Count];
+        lineRenderer.positionCount = points.Count;
+        //for (var i = 0; i < points.Count; i++)
+        //{
+        //    convertedArray[i] = new Vector3(points[i].x, 0f, -points[i].y);
+        //}
+        // When setting positions, push them slightly back on the Z axis
+        for (var i = 0; i < points.Count; i++)
+        {
+            convertedArray[i] = new Vector3(points[i].x, 0f, -points[i].y);
+        }
+        lineRenderer.SetPositions(convertedArray);
+        lineRenderer.sortingLayerName = "Default";
+        lineRenderer.sortingOrder = 0;
+        // lineRenderer.material.renderQueue = 1999;
+
+        return renderer;
+    }
+
     private static GameObject GetGameObject(string name)
     {
         var bundle = ModContent.GetBundle(ModHelper.GetMod("VisibleHitboxes"), "debugmat");
@@ -487,5 +604,33 @@ public class VisibleHitboxes : BloonsTD6Mod
     {
         var bundle = ModContent.GetBundle(ModHelper.GetMod("VisibleHitboxes"), "debugmat");
         return bundle.LoadAsset(name).Cast<Material>().Duplicate();
+    }
+
+    private static void Debug()
+    {
+        MelonLogger.Msg("Debug");
+    }
+
+    public override void OnTowerSelected(Tower tower)
+    {
+        base.OnTowerSelected(tower);
+    }
+
+    static void ToggleMapRendering(bool enabled)
+    {
+        var mapName = InGame.instance.GetMap().mapModel.mapName;
+        Scene scene = SceneManager.GetSceneByName(mapName);
+        GameObject mapObject = scene.GetRootGameObjects().First();
+
+        ToggleRendering(mapObject, enabled);
+    }
+
+    static void ToggleRendering(GameObject root, bool enabled)
+    {
+        Renderer[] renderers = root.GetComponentsInChildren<Renderer>(true);
+        foreach (var renderer in renderers)
+        {
+            renderer.enabled = enabled;
+        }
     }
 }
