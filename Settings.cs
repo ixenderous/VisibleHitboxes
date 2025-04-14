@@ -121,5 +121,11 @@ namespace VisibleHitboxes
         {
             return UseTransparency ? TransparencyLevel : 1.0f;
         }
+
+        public static readonly ModSettingHotkey DebugHotkey = new(KeyCode.Backslash);
+
+        public static readonly ModSettingHotkey ToggleMapRenderingHotkey = new(KeyCode.M, HotkeyModifier.Alt);
+
+        public static readonly ModSettingBool RenderMap = new(true);
     }
 }
