@@ -10,6 +10,17 @@ namespace VisibleHitboxes.HitboxManagers
 {
     public class BloonHitboxManager(ModSettingBool setting) : HitboxManager(setting)
     {
+        private float bloonScaleModifier = 1;
+        private float bossScaleModifier = 1;
+
+        public override void OnMatchStart()
+        {
+            base.OnMatchStart();
+
+            bloonScaleModifier = 1f / InGame.instance.GetGameModel().globalBloonScale;
+            bossScaleModifier = 1f / InGame.instance.GetGameModel().globalBossBloonScale;
+        }
+
         public override void Update()
         {
             if (!IsEnabled()) {
@@ -31,9 +42,11 @@ namespace VisibleHitboxes.HitboxManagers
 
                 var collisionData = bloon.GetSimBloon().AdditionalCollisions();
 
+                var scaleModifier = bloon.GetBaseModel().isBoss ? bossScaleModifier : bloonScaleModifier;
+
                 if (collisionData == null)
                 {
-                    var radius = bloon.GetSimBloon().Radius;
+                    var radius = bloon.GetSimBloon().Radius * scaleModifier;
                     var hitbox = CreateCircularHitbox(simDisplay, HitboxColors.Bloon, radius, Vector3.zero, bloonId.ToString());
                     if (hitbox != null)
                     {
@@ -47,8 +60,8 @@ namespace VisibleHitboxes.HitboxManagers
                     int count = 0;
                     foreach (var collision in collisionData)
                     {
-                        var offset = new Vector3(collision.offset.x, 0f, collision.offset.y);
-                        var radius = collision.radius;
+                        var offset = new Vector3(collision.offset.x, 0f, collision.offset.y) * scaleModifier;
+                        var radius = collision.radius * scaleModifier;
                         var hName = bloonId + "_" + count;
                         var hitbox = CreateCircularHitbox(simDisplay, HitboxColors.Bloon, radius, offset, hName);
                         if (hitbox != null)
