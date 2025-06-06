@@ -12,6 +12,8 @@ namespace VisibleHitboxes.HitboxManagers
 {
     public class TowerHitboxManager(ModSettingBool setting) : HitboxManager(setting)
     {
+        private float? lastScaleModifier = null;
+
         public override void Update()
         {
             if (!IsEnabled())
@@ -23,8 +25,10 @@ namespace VisibleHitboxes.HitboxManagers
             var activeIdentifiers = new List<string>();
             var displayRoot = Game.instance.GetDisplayFactory().DisplayRoot;
 
+            UpdateScaleModifier();
+
             foreach (var tower in InGame.Bridge.GetAllTowers().ToList())
-            {
+            { 
                 var simDisplay = tower.GetSimTower().GetUnityDisplayNode()?.gameObject.transform;
                 if (simDisplay == null || !simDisplay.gameObject.active) continue;
 
@@ -108,6 +112,28 @@ namespace VisibleHitboxes.HitboxManagers
                 spriteRenderer.color = new Color(color.r, color.g, color.b, Settings.GetTransparency());
                 spriteRenderer.sortingLayerName = "Bloons";
                 return circle;
+            }
+        }
+
+        private void UpdateScaleModifier()
+        {
+            var firstTower = InGame.Bridge.GetAllTowers().FirstOrDefault(t =>
+            {
+                var simDisplay = t.GetSimTower().GetUnityDisplayNode()?.gameObject.transform;
+                return simDisplay != null && simDisplay.gameObject.active;
+            });
+
+            if (firstTower != null)
+            {
+                var simDisplay = firstTower.GetSimTower().GetUnityDisplayNode().gameObject.transform;
+                var currentScaleModifier = 1 / simDisplay.localScale.x;
+
+                if (lastScaleModifier == null || !Mathf.Approximately(lastScaleModifier.Value, currentScaleModifier))
+                {
+                    // MelonLogger.Msg($"Global scaleModifier changed from {lastScaleModifier} to {currentScaleModifier}, clearing all hitboxes");
+                    lastScaleModifier = currentScaleModifier;
+                    ClearAllHitboxes();
+                }
             }
         }
 
