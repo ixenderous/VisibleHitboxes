@@ -12,7 +12,14 @@ namespace VisibleHitboxes.HitboxManagers
 {
     public class TowerHitboxManager(ModSettingBool setting) : HitboxManager(setting)
     {
-        private float? lastScaleModifier = null;
+        private float scaleModifier = 1;
+
+        public override void OnMatchStart()
+        {
+            base.OnMatchStart();
+
+            scaleModifier = 1f / InGame.instance.GetGameModel().globalTowerScale;
+        }
 
         public override void Update()
         {
@@ -24,8 +31,6 @@ namespace VisibleHitboxes.HitboxManagers
 
             var activeIdentifiers = new List<string>();
             var displayRoot = Game.instance.GetDisplayFactory().DisplayRoot;
-
-            UpdateScaleModifier();
 
             foreach (var tower in InGame.Bridge.GetAllTowers().ToList())
             { 
@@ -82,7 +87,7 @@ namespace VisibleHitboxes.HitboxManagers
             }
 
             name = HITBOX_OBJECT_NAME + name;
-            var scaleModifier = 1f / simDisplay.localScale.x;
+            // var scaleModifier = 1f / simDisplay.localScale.x;
 
             if (footprint.IsType<RectangleFootprintModel>())
             {
@@ -112,28 +117,6 @@ namespace VisibleHitboxes.HitboxManagers
                 spriteRenderer.color = new Color(color.r, color.g, color.b, Settings.GetTransparency());
                 spriteRenderer.sortingLayerName = "Bloons";
                 return circle;
-            }
-        }
-
-        private void UpdateScaleModifier()
-        {
-            var firstTower = InGame.Bridge.GetAllTowers().FirstOrDefault(t =>
-            {
-                var simDisplay = t.GetSimTower().GetUnityDisplayNode()?.gameObject.transform;
-                return simDisplay != null && simDisplay.gameObject.active;
-            });
-
-            if (firstTower != null)
-            {
-                var simDisplay = firstTower.GetSimTower().GetUnityDisplayNode().gameObject.transform;
-                var currentScaleModifier = 1 / simDisplay.localScale.x;
-
-                if (lastScaleModifier == null || !Mathf.Approximately(lastScaleModifier.Value, currentScaleModifier))
-                {
-                    // MelonLogger.Msg($"Global scaleModifier changed from {lastScaleModifier} to {currentScaleModifier}, clearing all hitboxes");
-                    lastScaleModifier = currentScaleModifier;
-                    ClearAllHitboxes();
-                }
             }
         }
 
