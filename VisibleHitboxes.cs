@@ -98,8 +98,8 @@ public class VisibleHitboxes : BloonsTD6Mod
 
     private void HandleHotkeys()
     {
-        if (Settings.DebugHotkey.JustPressed())
-            DebugLog();
+        //if (Settings.DebugHotkey.JustPressed())
+        //    DebugLog();
 
         if (Settings.ToggleMapRendering.JustPressed())
         {

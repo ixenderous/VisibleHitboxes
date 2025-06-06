@@ -59,10 +59,10 @@ namespace VisibleHitboxes
             displayName = "Toggle Map Rendering"
         };
 
-        public static readonly ModSettingHotkey DebugHotkey = new(KeyCode.None)
-        {
-            category = Hotkeys
-        };
+        //public static readonly ModSettingHotkey DebugHotkey = new(KeyCode.None)
+        //{
+        //    category = Hotkeys
+        //};
         #endregion
 
         #region Toggles
