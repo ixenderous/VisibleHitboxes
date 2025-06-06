@@ -26,7 +26,7 @@ namespace VisibleHitboxes.HitboxManagers
             return (bool)setting.GetValue();
         }
 
-        public void OnMatchStart() { }
+        public virtual void OnMatchStart() { }
 
         public virtual void OnMatchEnd() {
             ClearAllHitboxes();
