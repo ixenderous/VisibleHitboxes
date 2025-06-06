@@ -24,7 +24,7 @@ namespace VisibleHitboxes
         public static readonly Color AreaTrack = new(1f, 0f, 0f);
         public static readonly Color AreaWater = new(0f, 0.8f, 1f);
         public static readonly Color AreaLand = new(0.25f, 1f, 0f);
-        public static readonly Color AreaUnplaceable = new(1, 0f, 0f);
+        public static readonly Color AreaUnplaceable = new(1, 0.5f, 0f);
         public static readonly Color AreaIce = new(0, 1f, 0.75f);
         public static readonly Color AreaRemovable = new(1f, 0.75f, 0f);
         public static readonly Color AreaWaterMermonkey = new(0f, 0.2f, 1f);
