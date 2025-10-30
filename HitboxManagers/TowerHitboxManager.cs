@@ -10,9 +10,11 @@ using Object = Il2CppSystem.Object;
 
 namespace VisibleHitboxes.HitboxManagers
 {
-    public class TowerHitboxManager(ModSettingBool setting) : HitboxManager(setting)
+    public class TowerHitboxManager : HitboxManager
     {
         private float scaleModifier = 1;
+
+        public TowerHitboxManager(ModSettingBool setting) : base(setting) {}
 
         public override void OnMatchStart()
         {

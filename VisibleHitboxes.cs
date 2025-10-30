@@ -39,13 +39,14 @@ public class VisibleHitboxes : BloonsTD6Mod
         bloonManager = new(Settings.ShowBloonHitboxes);
         pathManager = new(Settings.ShowPathOverlay);
         mapManager = new(Settings.ShowMapOverlay);
-        managers = [
+        managers = new List<HitboxManager>
+        {
             projectileManager,
             towerManager,
             bloonManager,
             pathManager,
             mapManager
-        ];
+        };
     }
 
     public override void OnMatchStart()

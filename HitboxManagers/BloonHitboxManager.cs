@@ -8,10 +8,12 @@ using UnityEngine;
 
 namespace VisibleHitboxes.HitboxManagers
 {
-    public class BloonHitboxManager(ModSettingBool setting) : HitboxManager(setting)
+    public class BloonHitboxManager: HitboxManager
     {
         private float bloonScaleModifier = 1;
         private float bossScaleModifier = 1;
+        
+        public BloonHitboxManager(ModSettingBool setting) : base(setting) {}
 
         public override void OnMatchStart()
         {

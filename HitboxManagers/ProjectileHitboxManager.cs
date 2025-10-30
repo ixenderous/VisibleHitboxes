@@ -11,10 +11,10 @@ using UnityEngine;
 
 namespace VisibleHitboxes.HitboxManagers
 {
-    public class ProjectileHitboxManager(ModSettingBool setting) : HitboxManager(setting)
+    public class ProjectileHitboxManager : HitboxManager
     {
-        private List<HandledProjectile> handledProjectiles = [];
-
+        private List<HandledProjectile> handledProjectiles = new();
+        
         internal class HandledProjectile
         {
             public Projectile projectile { get; }
@@ -32,6 +32,8 @@ namespace VisibleHitboxes.HitboxManagers
                        !model.HasBehavior<SetSpriteFromPierceModel>();
             }
         }
+        
+        public ProjectileHitboxManager(ModSettingBool setting) : base(setting) {}
 
         public override void Update()
         {

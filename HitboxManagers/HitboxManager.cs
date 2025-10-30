@@ -7,7 +7,7 @@ using UnityEngine;
 
 namespace VisibleHitboxes.HitboxManagers
 {
-    public abstract class HitboxManager(ModSettingBool setting)
+    public abstract class HitboxManager
     {
         protected const string HITBOX_OBJECT_NAME = "Hitbox_";
         protected const float CIRCLE_SIZE_MULTIPLIER = 2f;
@@ -15,9 +15,15 @@ namespace VisibleHitboxes.HitboxManagers
         protected const int ID_LINE_RENDERER = -2;
         protected const int ID_MAP_AREA = -3;
 
-        protected readonly Dictionary<string, GameObject> Hitboxes = [];
-        protected List<string> previousIdentifiers = [];
-        protected readonly ModSettingBool setting = setting;
+        protected readonly Dictionary<string, GameObject> Hitboxes = new();
+        protected List<string> previousIdentifiers = new();
+        
+        protected readonly ModSettingBool setting;
+
+        public HitboxManager(ModSettingBool setting)
+        {
+            this.setting = setting;
+        }
 
         public abstract void Update();
 

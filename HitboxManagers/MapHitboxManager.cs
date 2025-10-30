@@ -12,8 +12,10 @@ using Vector3 = UnityEngine.Vector3;
 
 namespace VisibleHitboxes.HitboxManagers
 {
-    public class MapHitboxManager(ModSettingBool setting) : HitboxManager(setting)
+    public class MapHitboxManager : HitboxManager
     {
+        public MapHitboxManager(ModSettingBool setting) : base(setting) {}
+        
         public override void Update()
         {
             if (!IsEnabled())

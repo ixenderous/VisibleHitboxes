@@ -9,8 +9,10 @@ using UnityEngine;
 
 namespace VisibleHitboxes.HitboxManagers
 {
-    public class PathHitboxManager(ModSettingBool setting) : HitboxManager(setting)
+    public class PathHitboxManager : HitboxManager
     {
+        public PathHitboxManager(ModSettingBool setting) : base(setting) {}
+        
         public override void Update()
         {
             if (!IsEnabled())
