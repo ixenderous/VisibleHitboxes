@@ -9,6 +9,8 @@ namespace VisibleHitboxes.HitboxManagers
 {
     public abstract class HitboxManager
     {
+        public static readonly float TRANSPARENCY = 0.5f;
+        
         protected const string HITBOX_OBJECT_NAME = "Hitbox_";
         protected const float CIRCLE_SIZE_MULTIPLIER = 2f;
         protected const int ID_HELD_TOWER_HITBOX = -1;
@@ -17,33 +19,17 @@ namespace VisibleHitboxes.HitboxManagers
 
         protected readonly Dictionary<string, GameObject> Hitboxes = new();
         protected List<string> previousIdentifiers = new();
-        
-        protected readonly ModSettingBool setting;
 
-        public HitboxManager(ModSettingBool setting)
+        public abstract void Update(bool isEnabled);
+
+        public virtual void OnMatchStart()
         {
-            this.setting = setting;
         }
 
-        public abstract void Update();
-
-        public bool IsEnabled()
+        public virtual void OnMatchEnd()
         {
-            return (bool)setting.GetValue();
-        }
-
-        public virtual void OnMatchStart() { }
-
-        public virtual void OnMatchEnd() {
             ClearAllHitboxes();
             previousIdentifiers.Clear();
-        }
-
-        public virtual void LogDebugInfo()
-        {
-            MelonLogger.Msg($"  {this.GetType().Name}:");
-            MelonLogger.Msg($"\tManaging {Hitboxes.Count} hitboxes.");
-            MelonLogger.Msg($"\tIsEnabled: {IsEnabled()}");
         }
 
         protected void CleanUpHitboxes(List<string> activeIdentifiers)
@@ -59,9 +45,10 @@ namespace VisibleHitboxes.HitboxManagers
             {
                 if (hitbox != null)
                 {
-                    UnityEngine.Object.Destroy(hitbox);
+                    Object.Destroy(hitbox);
                 }
             }
+
             Hitboxes.Clear();
             previousIdentifiers.Clear();
         }
@@ -77,11 +64,12 @@ namespace VisibleHitboxes.HitboxManagers
             if (Hitboxes.TryGetValue(identifier, out var hitbox))
             {
                 Hitboxes.Remove(identifier);
-                UnityEngine.Object.Destroy(hitbox);
+                Object.Destroy(hitbox);
             }
         }
 
-        public GameObject? CreateCircularHitbox(Transform simDisplay, Color color, float radius, Vector3 offset, string name)
+        public GameObject? CreateCircularHitbox(Transform simDisplay, Color color, float radius, Vector3 offset,
+            string name)
         {
             if (Hitboxes.TryGetValue(name, out var gameObject))
             {
@@ -90,7 +78,7 @@ namespace VisibleHitboxes.HitboxManagers
 
                 if (!gameObject.transform.parent.gameObject.active)
                     return null;
-                
+
                 return gameObject;
             }
 
@@ -98,7 +86,7 @@ namespace VisibleHitboxes.HitboxManagers
 
             radius *= CIRCLE_SIZE_MULTIPLIER;
 
-            var circle = VisibleHitboxes.GetCircleObject();
+            var circle = GetCircleObject();
 
             circle.name = HITBOX_OBJECT_NAME + name;
             circle.transform.parent = simDisplay;
@@ -106,7 +94,7 @@ namespace VisibleHitboxes.HitboxManagers
             circle.transform.localScale = new Vector3(radius, radius, radius);
 
             var meshRenderer = circle.GetComponent<MeshRenderer>();
-            meshRenderer.material.color = new Color(color.r, color.g, color.b, Settings.GetTransparency());
+            meshRenderer.material.color = new Color(color.r, color.g, color.b, TRANSPARENCY);
             meshRenderer.sortingLayerName = "Bloons";
             meshRenderer.material.renderQueue = 4000;
 
@@ -131,7 +119,8 @@ namespace VisibleHitboxes.HitboxManagers
                 {
                     color = spriteRenderer.color;
                 }
-                spriteRenderer.color = new Color(color.r, color.g, color.b, Settings.GetTransparency());
+
+                spriteRenderer.color = new Color(color.r, color.g, color.b, TRANSPARENCY);
             }
             else if (hitbox.HasComponent<LineRenderer>())
             {
@@ -140,7 +129,8 @@ namespace VisibleHitboxes.HitboxManagers
                 {
                     color = lineRenderer.startColor;
                 }
-                color = new Color(color.r, color.g, color.b, Settings.GetTransparency());
+
+                color = new Color(color.r, color.g, color.b, TRANSPARENCY);
                 lineRenderer.SetColors(color, color);
             }
             else if (hitbox.HasComponent<MeshRenderer>())
@@ -150,8 +140,98 @@ namespace VisibleHitboxes.HitboxManagers
                 {
                     color = meshRenderer.material.color;
                 }
-                meshRenderer.material.color = new Color(color.r, color.g, color.b, Settings.GetTransparency());
+
+                meshRenderer.material.color = new Color(color.r, color.g, color.b, TRANSPARENCY);
             }
+        }
+
+        public static GameObject GetCircleObject()
+        {
+            var rendererGo = new GameObject();
+
+            // Components for rendering a filled shape
+            rendererGo.AddComponent<MeshFilter>();
+            var meshRenderer = rendererGo.AddComponent<MeshRenderer>();
+            meshRenderer.material = GetMaterial();
+
+            // Generate the circle mesh data
+            const int segments = 50;
+            const float radius = 0.5f;
+
+            var vertices = new List<Vector3>();
+            var triangles = new List<int>();
+
+            // Center vertex
+            vertices.Add(new Vector3(0f, 0f, 0f));
+
+            // Perimeter vertices
+            for (int i = 0; i <= segments; i++)
+            {
+                float angle = i * (360f / segments) * Mathf.Deg2Rad;
+                float x = Mathf.Sin(angle) * radius;
+                float z = Mathf.Cos(angle) * radius;
+                vertices.Add(new Vector3(x, 0f, z));
+            }
+
+            // Create triangles (Fan pattern)
+            for (int i = 0; i < segments; i++)
+            {
+                // Triangle connects: Center (0), current point (i+1), next point (i+2)
+                triangles.Add(0); // Center point
+                triangles.Add(i + 1); // Current perimeter point
+                triangles.Add(i + 2); // Next perimeter point (or wraps to the start)
+            }
+
+            // Apply mesh data
+            var mesh = new Mesh();
+            mesh.vertices = vertices.ToArray();
+            mesh.triangles = triangles.ToArray();
+            mesh.RecalculateNormals();
+
+            rendererGo.GetComponent<MeshFilter>().mesh = mesh;
+
+            return rendererGo;
+        }
+
+        public static GameObject GetSquareObject()
+        {
+            var rendererGo = new GameObject();
+
+            // Components for rendering a filled shape
+            rendererGo.AddComponent<MeshFilter>();
+            var meshRenderer = rendererGo.AddComponent<MeshRenderer>();
+            meshRenderer.material = GetMaterial();
+
+            // Vertices (4 corners)
+            var vertices = new Vector3[]
+            {
+                new Vector3(-0.5f, 0f, -0.5f), // Bottom-Left (0)
+                new Vector3(0.5f, 0f, -0.5f), // Bottom-Right (1)
+                new Vector3(0.5f, 0f, 0.5f), // Top-Right (2)
+                new Vector3(-0.5f, 0f, 0.5f) // Top-Left (3)
+            };
+
+            // Triangles (Two triangles to make a square/quad)
+            var triangles = new int[]
+            {
+                0, 2, 1, // First triangle: 0 -> 2 -> 1
+                0, 3, 2 // Second triangle: 0 -> 3 -> 2
+            };
+
+            // Apply mesh data
+            var mesh = new Mesh();
+            mesh.vertices = vertices;
+            mesh.triangles = triangles;
+            mesh.RecalculateNormals();
+
+            rendererGo.GetComponent<MeshFilter>().mesh = mesh;
+
+            return rendererGo;
+        }
+
+        public static Material GetMaterial()
+        {
+            return new Material(Shader.Find("Hidden/Internal-Colored"));
         }
     }
 }

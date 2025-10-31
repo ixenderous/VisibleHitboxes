@@ -1,8 +1,6 @@
-﻿using BTD_Mod_Helper.Api.ModOptions;
-using BTD_Mod_Helper.Extensions;
+﻿using BTD_Mod_Helper.Extensions;
 using Il2CppAssets.Scripts.Models.Towers.Behaviors;
 using Il2CppAssets.Scripts.Simulation.Towers;
-using Il2CppAssets.Scripts.Unity;
 using Il2CppAssets.Scripts.Unity.UI_New.InGame;
 using System.Collections.Generic;
 using UnityEngine;
@@ -14,8 +12,6 @@ namespace VisibleHitboxes.HitboxManagers
     {
         private float scaleModifier = 1;
 
-        public TowerHitboxManager(ModSettingBool setting) : base(setting) {}
-
         public override void OnMatchStart()
         {
             base.OnMatchStart();
@@ -23,9 +19,9 @@ namespace VisibleHitboxes.HitboxManagers
             scaleModifier = 1f / InGame.instance.GetGameModel().globalTowerScale;
         }
 
-        public override void Update()
+        public override void Update(bool isEnabled)
         {
-            if (!IsEnabled())
+            if (!isEnabled)
             {
                 ClearAllHitboxes();
                 return;
@@ -93,7 +89,7 @@ namespace VisibleHitboxes.HitboxManagers
             if (footprint.IsType<RectangleFootprintModel>())
             {
                 var footprintModel = footprint.Cast<RectangleFootprintModel>();
-                var square = VisibleHitboxes.GetSquareObject();
+                var square = GetSquareObject();
 
                 square.name = name;
                 square.transform.parent = simDisplay;
@@ -101,7 +97,7 @@ namespace VisibleHitboxes.HitboxManagers
                 square.transform.localScale = new Vector3(footprintModel.xWidth, footprintModel.yWidth, footprintModel.yWidth) * scaleModifier;
 
                 var meshRenderer = square.GetComponent<MeshRenderer>();
-                meshRenderer.material.color = new Color(color.r, color.g, color.b, Settings.GetTransparency());
+                meshRenderer.material.color = new Color(color.r, color.g, color.b, TRANSPARENCY);
                 meshRenderer.sortingLayerName = "Bloons";
                 meshRenderer.material.renderQueue = 4000;
                 return square;
@@ -116,7 +112,7 @@ namespace VisibleHitboxes.HitboxManagers
                 if (circle == null) return null;
 
                 var meshRenderer = circle.GetComponent<MeshRenderer>();
-                meshRenderer.material.color = new Color(color.r, color.g, color.b, Settings.GetTransparency());
+                meshRenderer.material.color = new Color(color.r, color.g, color.b, TRANSPARENCY);
                 meshRenderer.sortingLayerName = "Bloons";
                 meshRenderer.material.renderQueue = 4000;
                 return circle;

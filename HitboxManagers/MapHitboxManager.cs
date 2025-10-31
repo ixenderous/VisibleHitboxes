@@ -1,5 +1,4 @@
-﻿using BTD_Mod_Helper.Api.ModOptions;
-using BTD_Mod_Helper.Extensions;
+﻿using BTD_Mod_Helper.Extensions;
 using Il2CppAssets.Scripts.Models.Map;
 using Il2CppAssets.Scripts.Unity;
 using Il2CppAssets.Scripts.Unity.UI_New.InGame;
@@ -14,11 +13,9 @@ namespace VisibleHitboxes.HitboxManagers
 {
     public class MapHitboxManager : HitboxManager
     {
-        public MapHitboxManager(ModSettingBool setting) : base(setting) {}
-        
-        public override void Update()
+        public override void Update(bool isEnabled)
         {
-            if (!IsEnabled())
+            if (!isEnabled)
             {
                 ClearAllHitboxes();
                 return;
@@ -91,9 +88,9 @@ namespace VisibleHitboxes.HitboxManagers
             renderer.AddComponent<LineRenderer>();
             var lineRenderer = renderer.GetComponent<LineRenderer>();
             lineRenderer.material = new Material(Shader.Find("Hidden/Internal-Colored"));
-            var color1 = new Color(color.r, color.g, color.b, Settings.GetTransparency());
-            lineRenderer.startColor = new Color(color.r, color.g, color.b, Settings.GetTransparency());
-            lineRenderer.endColor = new Color(color.r, color.g, color.b, Settings.GetTransparency());
+            var color1 = new Color(color.r, color.g, color.b, TRANSPARENCY);
+            lineRenderer.startColor = new Color(color.r, color.g, color.b, TRANSPARENCY);
+            lineRenderer.endColor = new Color(color.r, color.g, color.b, TRANSPARENCY);
             lineRenderer.SetColors(color1, color1);
             lineRenderer.SetWidth(0.5f, 0.5f);
             lineRenderer.loop = true;
