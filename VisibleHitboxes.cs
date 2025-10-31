@@ -29,21 +29,18 @@ public class VisibleHitboxes : BloonsTD6Mod
     private bool isInGame;
 
     private readonly List<HitboxManager> managers;
-
-    private readonly ProjectileHitboxManager projectileManager;
+    
     private readonly TowerHitboxManager towerManager;
     private readonly BloonHitboxManager bloonManager;
     private readonly MapHitboxManager mapManager;
 
     public VisibleHitboxes()
     {
-        projectileManager = new(Settings.ShowProjectileHitboxes);
         towerManager = new(Settings.ShowTowerHitboxes);
         bloonManager = new(Settings.ShowBloonHitboxes);
         mapManager = new(Settings.ShowMapOverlay);
         managers = new List<HitboxManager>
         {
-            projectileManager,
             towerManager,
             bloonManager,
             mapManager
@@ -83,11 +80,6 @@ public class VisibleHitboxes : BloonsTD6Mod
         towerManager?.OnTowerUpgraded(tower);
     }
 
-    public override void OnProjectileCreated(Projectile projectile, Entity entity, Model modelToUse)
-    {
-        projectileManager?.OnProjectileCreated(projectile, modelToUse);
-    }
-
     public override void OnUpdate()
     {
         if (!isInGame || InGame.instance == null) return;
@@ -113,16 +105,12 @@ public class VisibleHitboxes : BloonsTD6Mod
         {
             bool newState = !Settings.IsEverythingEnabled();
             Settings.ShowTowerHitboxes.SetValue(newState);
-            Settings.ShowProjectileHitboxes.SetValue(newState);
             Settings.ShowBloonHitboxes.SetValue(newState);
             Settings.ShowMapOverlay.SetValue(newState);
         }
 
         if (Settings.ToggleTowerHitboxes.JustPressed())
             Settings.ShowTowerHitboxes.SetValue(!Settings.ShowTowerHitboxes);
-
-        if (Settings.ToggleProjectileHitboxes.JustPressed())
-            Settings.ShowProjectileHitboxes.SetValue(!Settings.ShowProjectileHitboxes);
 
         if (Settings.ToggleBloonHitboxes.JustPressed())
             Settings.ShowBloonHitboxes.SetValue(!Settings.ShowBloonHitboxes);

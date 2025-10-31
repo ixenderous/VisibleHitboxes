@@ -29,12 +29,6 @@ namespace VisibleHitboxes
             displayName = "Toggle Tower Hitboxes"
         };
 
-        public static readonly ModSettingHotkey ToggleProjectileHitboxes = new(KeyCode.P, HotkeyModifier.Shift)
-        {
-            category = Hotkeys,
-            displayName = "Toggle Projectile Hitboxes"
-        };
-
         public static readonly ModSettingHotkey ToggleBloonHitboxes = new(KeyCode.B, HotkeyModifier.Shift)
         {
             category = Hotkeys,
@@ -72,12 +66,6 @@ namespace VisibleHitboxes
             displayName = "Show Tower Hitboxes"
         };
 
-        public static readonly ModSettingBool ShowProjectileHitboxes = new(true)
-        {
-            category = Toggles,
-            displayName = "Show Projectile Hitboxes"
-        };
-
         public static readonly ModSettingBool ShowBloonHitboxes = new(true)
         {
             category = Toggles,
@@ -107,7 +95,7 @@ namespace VisibleHitboxes
 
         public static bool IsEverythingEnabled()
         {
-            return ShowTowerHitboxes && ShowProjectileHitboxes && ShowBloonHitboxes && ShowMapOverlay;
+            return ShowTowerHitboxes && ShowBloonHitboxes && ShowMapOverlay;
         }
 
         public static float GetTransparency()
