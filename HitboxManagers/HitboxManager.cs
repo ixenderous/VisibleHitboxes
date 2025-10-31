@@ -3,6 +3,8 @@ using BTD_Mod_Helper.Extensions;
 using MelonLoader;
 using System.Collections.Generic;
 using System.Linq;
+using BTD_Mod_Helper;
+using BTD_Mod_Helper.Api;
 using UnityEngine;
 
 namespace VisibleHitboxes.HitboxManagers
@@ -86,17 +88,16 @@ namespace VisibleHitboxes.HitboxManagers
 
             radius *= CIRCLE_SIZE_MULTIPLIER;
 
-            var circle = GetCircleObject();
+            var circle = GetGameObject("circle");
 
             circle.name = HITBOX_OBJECT_NAME + name;
             circle.transform.parent = simDisplay;
             circle.transform.localPosition = offset;
             circle.transform.localScale = new Vector3(radius, radius, radius);
 
-            var meshRenderer = circle.GetComponent<MeshRenderer>();
-            meshRenderer.material.color = new Color(color.r, color.g, color.b, TRANSPARENCY);
-            meshRenderer.sortingLayerName = "Bloons";
-            meshRenderer.material.renderQueue = 4000;
+            var spriteRenderer = circle.GetComponent<SpriteRenderer>();
+            spriteRenderer.color = new Color(color.r, color.g, color.b, TRANSPARENCY);
+            spriteRenderer.sortingLayerName = "Bloons";
 
             return circle;
         }
@@ -145,93 +146,16 @@ namespace VisibleHitboxes.HitboxManagers
             }
         }
 
-        public static GameObject GetCircleObject()
+        public static GameObject GetGameObject(string name)
         {
-            var rendererGo = new GameObject();
-
-            // Components for rendering a filled shape
-            rendererGo.AddComponent<MeshFilter>();
-            var meshRenderer = rendererGo.AddComponent<MeshRenderer>();
-            meshRenderer.material = GetMaterial();
-
-            // Generate the circle mesh data
-            const int segments = 50;
-            const float radius = 0.5f;
-
-            var vertices = new List<Vector3>();
-            var triangles = new List<int>();
-
-            // Center vertex
-            vertices.Add(new Vector3(0f, 0f, 0f));
-
-            // Perimeter vertices
-            for (int i = 0; i <= segments; i++)
-            {
-                float angle = i * (360f / segments) * Mathf.Deg2Rad;
-                float x = Mathf.Sin(angle) * radius;
-                float z = Mathf.Cos(angle) * radius;
-                vertices.Add(new Vector3(x, 0f, z));
-            }
-
-            // Create triangles (Fan pattern)
-            for (int i = 0; i < segments; i++)
-            {
-                // Triangle connects: Center (0), current point (i+1), next point (i+2)
-                triangles.Add(0); // Center point
-                triangles.Add(i + 1); // Current perimeter point
-                triangles.Add(i + 2); // Next perimeter point (or wraps to the start)
-            }
-
-            // Apply mesh data
-            var mesh = new Mesh();
-            mesh.vertices = vertices.ToArray();
-            mesh.triangles = triangles.ToArray();
-            mesh.RecalculateNormals();
-
-            rendererGo.GetComponent<MeshFilter>().mesh = mesh;
-
-            return rendererGo;
+            var bundle = ModContent.GetBundle(ModHelper.GetMod("VisibleHitboxes"), "debugmat");
+            return bundle.LoadAssetAsync(name).GetResult().Cast<GameObject>().Duplicate();
         }
 
-        public static GameObject GetSquareObject()
+        public static Material GetMaterial(string name)
         {
-            var rendererGo = new GameObject();
-
-            // Components for rendering a filled shape
-            rendererGo.AddComponent<MeshFilter>();
-            var meshRenderer = rendererGo.AddComponent<MeshRenderer>();
-            meshRenderer.material = GetMaterial();
-
-            // Vertices (4 corners)
-            var vertices = new Vector3[]
-            {
-                new Vector3(-0.5f, 0f, -0.5f), // Bottom-Left (0)
-                new Vector3(0.5f, 0f, -0.5f), // Bottom-Right (1)
-                new Vector3(0.5f, 0f, 0.5f), // Top-Right (2)
-                new Vector3(-0.5f, 0f, 0.5f) // Top-Left (3)
-            };
-
-            // Triangles (Two triangles to make a square/quad)
-            var triangles = new int[]
-            {
-                0, 2, 1, // First triangle: 0 -> 2 -> 1
-                0, 3, 2 // Second triangle: 0 -> 3 -> 2
-            };
-
-            // Apply mesh data
-            var mesh = new Mesh();
-            mesh.vertices = vertices;
-            mesh.triangles = triangles;
-            mesh.RecalculateNormals();
-
-            rendererGo.GetComponent<MeshFilter>().mesh = mesh;
-
-            return rendererGo;
-        }
-
-        public static Material GetMaterial()
-        {
-            return new Material(Shader.Find("Hidden/Internal-Colored"));
+            var bundle = ModContent.GetBundle(ModHelper.GetMod("VisibleHitboxes"), "debugmat");
+            return bundle.LoadAssetAsync(name).GetResult().Cast<Material>().Duplicate();
         }
     }
 }

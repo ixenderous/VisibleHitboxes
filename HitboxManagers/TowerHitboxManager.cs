@@ -89,17 +89,17 @@ namespace VisibleHitboxes.HitboxManagers
             if (footprint.IsType<RectangleFootprintModel>())
             {
                 var footprintModel = footprint.Cast<RectangleFootprintModel>();
-                var square = GetSquareObject();
+                var square = GetGameObject("square");
 
                 square.name = name;
                 square.transform.parent = simDisplay;
                 square.transform.localPosition = Vector3.zero;
                 square.transform.localScale = new Vector3(footprintModel.xWidth, footprintModel.yWidth, footprintModel.yWidth) * scaleModifier;
 
-                var meshRenderer = square.GetComponent<MeshRenderer>();
-                meshRenderer.material.color = new Color(color.r, color.g, color.b, TRANSPARENCY);
-                meshRenderer.sortingLayerName = "Bloons";
-                meshRenderer.material.renderQueue = 4000;
+                var spriteRenderer = square.GetComponent<SpriteRenderer>();
+                spriteRenderer.color = new Color(color.r, color.g, color.b, TRANSPARENCY);
+                spriteRenderer.sortingLayerName = "Bloons";
+
                 return square;
             }
             else
@@ -111,10 +111,10 @@ namespace VisibleHitboxes.HitboxManagers
                 
                 if (circle == null) return null;
 
-                var meshRenderer = circle.GetComponent<MeshRenderer>();
-                meshRenderer.material.color = new Color(color.r, color.g, color.b, TRANSPARENCY);
-                meshRenderer.sortingLayerName = "Bloons";
-                meshRenderer.material.renderQueue = 4000;
+                var spriteRenderer = circle.GetComponent<SpriteRenderer>();
+                spriteRenderer.color = new Color(color.r, color.g, color.b, TRANSPARENCY);
+                spriteRenderer.sortingLayerName = "Bloons";
+                
                 return circle;
             }
         }
