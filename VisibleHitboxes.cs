@@ -33,7 +33,6 @@ public class VisibleHitboxes : BloonsTD6Mod
     private readonly ProjectileHitboxManager projectileManager;
     private readonly TowerHitboxManager towerManager;
     private readonly BloonHitboxManager bloonManager;
-    private readonly PathHitboxManager pathManager;
     private readonly MapHitboxManager mapManager;
 
     public VisibleHitboxes()
@@ -41,14 +40,12 @@ public class VisibleHitboxes : BloonsTD6Mod
         projectileManager = new(Settings.ShowProjectileHitboxes);
         towerManager = new(Settings.ShowTowerHitboxes);
         bloonManager = new(Settings.ShowBloonHitboxes);
-        pathManager = new(Settings.ShowPathOverlay);
         mapManager = new(Settings.ShowMapOverlay);
         managers = new List<HitboxManager>
         {
             projectileManager,
             towerManager,
             bloonManager,
-            pathManager,
             mapManager
         };
     }
@@ -119,7 +116,6 @@ public class VisibleHitboxes : BloonsTD6Mod
             Settings.ShowProjectileHitboxes.SetValue(newState);
             Settings.ShowBloonHitboxes.SetValue(newState);
             Settings.ShowMapOverlay.SetValue(newState);
-            Settings.ShowPathOverlay.SetValue(newState);
         }
 
         if (Settings.ToggleTowerHitboxes.JustPressed())
@@ -133,9 +129,6 @@ public class VisibleHitboxes : BloonsTD6Mod
 
         if (Settings.ToggleMapOverlay.JustPressed())
             Settings.ShowMapOverlay.SetValue(!Settings.ShowMapOverlay);
-
-        if (Settings.TogglePathsOverlay.JustPressed())
-            Settings.ShowPathOverlay.SetValue(!Settings.ShowPathOverlay);
 
         if (Settings.ToggleTransparency.JustPressed())
         {
@@ -157,14 +150,8 @@ public class VisibleHitboxes : BloonsTD6Mod
         // Components for rendering a filled shape
         rendererGo.AddComponent<MeshFilter>();
         var meshRenderer = rendererGo.AddComponent<MeshRenderer>();
-
-        // Material and rendering settings
         meshRenderer.material = new Material(Shader.Find("Hidden/Internal-Colored"));
-        // meshRenderer.material.color = Color.blue; // Default color, can be changed later
-        // meshRenderer.sortingLayerName = "Bloons";
-        // meshRenderer.sortingOrder = 10;
-        // meshRenderer.material.renderQueue = 4000;
-
+        
         // Generate the circle mesh data
         const int segments = 50;
         const float radius = 0.5f;
@@ -211,13 +198,7 @@ public class VisibleHitboxes : BloonsTD6Mod
         // Components for rendering a filled shape
         rendererGo.AddComponent<MeshFilter>();
         var meshRenderer = rendererGo.AddComponent<MeshRenderer>();
-
-        // Material and rendering settings
         meshRenderer.material = new Material(Shader.Find("Hidden/Internal-Colored"));
-        // meshRenderer.material.color = Color.magenta; // Default color
-        // meshRenderer.sortingLayerName = "Bloons";
-        // meshRenderer.sortingOrder = 10;
-        // meshRenderer.material.renderQueue = 4000;
 
         // Vertices (4 corners)
         var vertices = new Vector3[]

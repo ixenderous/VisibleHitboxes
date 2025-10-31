@@ -47,12 +47,6 @@ namespace VisibleHitboxes
             displayName = "Toggle Map Overlay"
         };
 
-        public static readonly ModSettingHotkey TogglePathsOverlay = new(KeyCode.L, HotkeyModifier.Shift)
-        {
-            category = Hotkeys,
-            displayName = "Toggle path Overlay"
-        };
-
         public static readonly ModSettingHotkey ToggleMapRendering = new(KeyCode.M, HotkeyModifier.Alt)
         {
             category = Hotkeys,
@@ -96,12 +90,6 @@ namespace VisibleHitboxes
             displayName = "Show Map Overlay"
         };
 
-        public static readonly ModSettingBool ShowPathOverlay = new(true)
-        {
-            category = Toggles,
-            displayName = "Show Path Overlay"
-        };
-
         public static readonly ModSettingBool RenderMap = new(true)
         {
             category = Toggles,
@@ -119,7 +107,7 @@ namespace VisibleHitboxes
 
         public static bool IsEverythingEnabled()
         {
-            return ShowTowerHitboxes && ShowProjectileHitboxes && ShowBloonHitboxes && ShowMapOverlay && ShowPathOverlay;
+            return ShowTowerHitboxes && ShowProjectileHitboxes && ShowBloonHitboxes && ShowMapOverlay;
         }
 
         public static float GetTransparency()
