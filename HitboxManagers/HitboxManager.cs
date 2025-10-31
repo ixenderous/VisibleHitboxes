@@ -1,6 +1,4 @@
-﻿using BTD_Mod_Helper.Api.ModOptions;
-using BTD_Mod_Helper.Extensions;
-using MelonLoader;
+﻿using BTD_Mod_Helper.Extensions;
 using System.Collections.Generic;
 using System.Linq;
 using BTD_Mod_Helper;
@@ -12,6 +10,11 @@ namespace VisibleHitboxes.HitboxManagers
     public abstract class HitboxManager
     {
         public static readonly float TRANSPARENCY = 0.5f;
+
+        protected static AssetBundle bundle;
+        protected static GameObject circle;
+        protected static GameObject square;
+        protected static Material material;
         
         protected const string HITBOX_OBJECT_NAME = "Hitbox_";
         protected const float CIRCLE_SIZE_MULTIPLIER = 2f;
@@ -23,6 +26,14 @@ namespace VisibleHitboxes.HitboxManagers
         protected List<string> previousIdentifiers = new();
 
         public abstract void Update(bool isEnabled);
+
+        public static void Initialize()
+        {
+            bundle = ModContent.GetBundle(ModHelper.GetMod("VisibleHitboxes"), "debugmat");
+            circle = bundle.LoadAssetAsync("circle").GetResult().Cast<GameObject>();
+            square = bundle.LoadAssetAsync("square").GetResult().Cast<GameObject>();
+            material = bundle.LoadAssetAsync("ShaderTransparent").GetResult().Cast<Material>();
+        }
 
         public virtual void OnMatchStart()
         {
@@ -88,7 +99,7 @@ namespace VisibleHitboxes.HitboxManagers
 
             radius *= CIRCLE_SIZE_MULTIPLIER;
 
-            var circle = GetGameObject("circle");
+            var circle = GetCircle();
 
             circle.name = HITBOX_OBJECT_NAME + name;
             circle.transform.parent = simDisplay;
@@ -146,16 +157,19 @@ namespace VisibleHitboxes.HitboxManagers
             }
         }
 
-        public static GameObject GetGameObject(string name)
+        public static GameObject GetCircle()
         {
-            var bundle = ModContent.GetBundle(ModHelper.GetMod("VisibleHitboxes"), "debugmat");
-            return bundle.LoadAssetAsync(name).GetResult().Cast<GameObject>().Duplicate();
+            return circle.Duplicate();
         }
 
-        public static Material GetMaterial(string name)
+        public static GameObject GetSquare()
         {
-            var bundle = ModContent.GetBundle(ModHelper.GetMod("VisibleHitboxes"), "debugmat");
-            return bundle.LoadAssetAsync(name).GetResult().Cast<Material>().Duplicate();
+            return square.Duplicate();
+        }
+
+        public static Material GetMaterial()
+        {
+            return material.Duplicate();
         }
     }
 }

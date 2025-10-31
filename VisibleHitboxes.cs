@@ -42,6 +42,9 @@ public class VisibleHitboxes : BloonsTD6Mod
     public override void OnMatchStart()
     {
         base.OnMatchStart();
+        
+        HitboxManager.Initialize();
+        
         isInGame = true;
         wasPlacing = false;
 

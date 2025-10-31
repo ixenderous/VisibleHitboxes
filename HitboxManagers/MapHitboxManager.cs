@@ -87,7 +87,7 @@ namespace VisibleHitboxes.HitboxManagers
 
             renderer.AddComponent<LineRenderer>();
             var lineRenderer = renderer.GetComponent<LineRenderer>();
-            lineRenderer.material = GetMaterial("ShaderTransparent");
+            lineRenderer.material = GetMaterial();
             var color1 = new Color(color.r, color.g, color.b, TRANSPARENCY);
             lineRenderer.startColor = new Color(color.r, color.g, color.b, TRANSPARENCY);
             lineRenderer.endColor = new Color(color.r, color.g, color.b, TRANSPARENCY);

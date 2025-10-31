@@ -89,7 +89,7 @@ namespace VisibleHitboxes.HitboxManagers
             if (footprint.IsType<RectangleFootprintModel>())
             {
                 var footprintModel = footprint.Cast<RectangleFootprintModel>();
-                var square = GetGameObject("square");
+                var square = GetSquare();
 
                 square.name = name;
                 square.transform.parent = simDisplay;
