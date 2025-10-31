@@ -90,7 +90,7 @@ namespace VisibleHitboxes.HitboxManagers
 
             renderer.AddComponent<LineRenderer>();
             var lineRenderer = renderer.GetComponent<LineRenderer>();
-            lineRenderer.material = VisibleHitboxes.GetMaterial("ShaderTransparent");
+            lineRenderer.material = new Material(Shader.Find("Hidden/Internal-Colored"));
             var color1 = new Color(color.r, color.g, color.b, Settings.GetTransparency());
             lineRenderer.startColor = new Color(color.r, color.g, color.b, Settings.GetTransparency());
             lineRenderer.endColor = new Color(color.r, color.g, color.b, Settings.GetTransparency());

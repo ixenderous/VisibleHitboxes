@@ -1,4 +1,5 @@
-﻿using BTD_Mod_Helper;
+﻿using System;
+using BTD_Mod_Helper;
 using BTD_Mod_Helper.Api;
 using BTD_Mod_Helper.Extensions;
 using Il2CppAssets.Scripts.Models;
@@ -14,8 +15,11 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using VisibleHitboxes;
 using VisibleHitboxes.HitboxManagers;
+using Object = UnityEngine.Object;
 
-[assembly: MelonInfo(typeof(VisibleHitboxes.VisibleHitboxes), ModHelperData.Name, ModHelperData.Version, ModHelperData.RepoOwner)]
+[assembly:
+    MelonInfo(typeof(VisibleHitboxes.VisibleHitboxes), ModHelperData.Name, ModHelperData.Version,
+        ModHelperData.RepoOwner)]
 [assembly: MelonGame("Ninja Kiwi", "BloonsTD6")]
 
 namespace VisibleHitboxes;
@@ -31,7 +35,7 @@ public class VisibleHitboxes : BloonsTD6Mod
     private readonly BloonHitboxManager bloonManager;
     private readonly PathHitboxManager pathManager;
     private readonly MapHitboxManager mapManager;
-    
+
     public VisibleHitboxes()
     {
         projectileManager = new(Settings.ShowProjectileHitboxes);
@@ -146,16 +150,105 @@ public class VisibleHitboxes : BloonsTD6Mod
             manager.UpdateHitboxes();
     }
 
-    public static GameObject GetGameObject(string name)
+    public static GameObject GetCircleObject()
     {
-        var bundle = ModContent.GetBundle(ModHelper.GetMod("VisibleHitboxes"), "debugmat");
-        return bundle.LoadAsset(name).Cast<GameObject>().Duplicate();
+        var rendererGo = new GameObject();
+
+        // Components for rendering a filled shape
+        rendererGo.AddComponent<MeshFilter>();
+        var meshRenderer = rendererGo.AddComponent<MeshRenderer>();
+
+        // Material and rendering settings
+        meshRenderer.material = new Material(Shader.Find("Hidden/Internal-Colored"));
+        // meshRenderer.material.color = Color.blue; // Default color, can be changed later
+        // meshRenderer.sortingLayerName = "Bloons";
+        // meshRenderer.sortingOrder = 10;
+        // meshRenderer.material.renderQueue = 4000;
+
+        // Generate the circle mesh data
+        const int segments = 50;
+        const float radius = 0.5f;
+
+        var vertices = new List<Vector3>();
+        var triangles = new List<int>();
+
+        // Center vertex
+        vertices.Add(new Vector3(0f, 0f, 0f));
+
+        // Perimeter vertices
+        for (int i = 0; i <= segments; i++)
+        {
+            float angle = i * (360f / segments) * Mathf.Deg2Rad;
+            float x = Mathf.Sin(angle) * radius;
+            float z = Mathf.Cos(angle) * radius;
+            vertices.Add(new Vector3(x, 0f, z));
+        }
+
+        // Create triangles (Fan pattern)
+        for (int i = 0; i < segments; i++)
+        {
+            // Triangle connects: Center (0), current point (i+1), next point (i+2)
+            triangles.Add(0); // Center point
+            triangles.Add(i + 1); // Current perimeter point
+            triangles.Add(i + 2); // Next perimeter point (or wraps to the start)
+        }
+
+        // Apply mesh data
+        var mesh = new Mesh();
+        mesh.vertices = vertices.ToArray();
+        mesh.triangles = triangles.ToArray();
+        mesh.RecalculateNormals();
+
+        rendererGo.GetComponent<MeshFilter>().mesh = mesh;
+
+        return rendererGo;
     }
 
-    public static Material GetMaterial(string name)
+    public static GameObject GetSquareObject()
     {
-        var bundle = ModContent.GetBundle(ModHelper.GetMod("VisibleHitboxes"), "debugmat");
-        return bundle.LoadAsset(name).Cast<Material>().Duplicate();
+        var rendererGo = new GameObject();
+
+        // Components for rendering a filled shape
+        rendererGo.AddComponent<MeshFilter>();
+        var meshRenderer = rendererGo.AddComponent<MeshRenderer>();
+
+        // Material and rendering settings
+        meshRenderer.material = new Material(Shader.Find("Hidden/Internal-Colored"));
+        // meshRenderer.material.color = Color.magenta; // Default color
+        // meshRenderer.sortingLayerName = "Bloons";
+        // meshRenderer.sortingOrder = 10;
+        // meshRenderer.material.renderQueue = 4000;
+
+        // Vertices (4 corners)
+        var vertices = new Vector3[]
+        {
+            new Vector3(-0.5f, 0f, -0.5f), // Bottom-Left (0)
+            new Vector3(0.5f, 0f, -0.5f), // Bottom-Right (1)
+            new Vector3(0.5f, 0f, 0.5f), // Top-Right (2)
+            new Vector3(-0.5f, 0f, 0.5f) // Top-Left (3)
+        };
+
+        // Triangles (Two triangles to make a square/quad)
+        var triangles = new int[]
+        {
+            0, 2, 1, // First triangle: 0 -> 2 -> 1
+            0, 3, 2 // Second triangle: 0 -> 3 -> 2
+        };
+
+        // Apply mesh data
+        var mesh = new Mesh();
+        mesh.vertices = vertices;
+        mesh.triangles = triangles;
+        mesh.RecalculateNormals();
+
+        rendererGo.GetComponent<MeshFilter>().mesh = mesh;
+
+        return rendererGo;
+    }
+
+    public static Material GetMaterial()
+    {
+        return new Material(Shader.Find("Hidden/Internal-Colored"));
     }
 
     private void DebugLog()

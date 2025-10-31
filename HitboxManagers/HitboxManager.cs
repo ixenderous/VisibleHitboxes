@@ -98,16 +98,17 @@ namespace VisibleHitboxes.HitboxManagers
 
             radius *= CIRCLE_SIZE_MULTIPLIER;
 
-            var circle = VisibleHitboxes.GetGameObject("Circle");
+            var circle = VisibleHitboxes.GetCircleObject();
 
             circle.name = HITBOX_OBJECT_NAME + name;
             circle.transform.parent = simDisplay;
             circle.transform.localPosition = offset;
             circle.transform.localScale = new Vector3(radius, radius, radius);
 
-            var spriteRenderer = circle.GetComponent<SpriteRenderer>();
-            spriteRenderer.color = new Color(color.r, color.g, color.b, Settings.GetTransparency());
-            spriteRenderer.sortingLayerName = "Bloons";
+            var meshRenderer = circle.GetComponent<MeshRenderer>();
+            meshRenderer.material.color = new Color(color.r, color.g, color.b, Settings.GetTransparency());
+            meshRenderer.sortingLayerName = "Bloons";
+            meshRenderer.material.renderQueue = 4000;
 
             return circle;
         }

@@ -57,7 +57,7 @@ namespace VisibleHitboxes.HitboxManagers
 
             renderer.AddComponent<LineRenderer>();
             var lineRenderer = renderer.GetComponent<LineRenderer>();
-            lineRenderer.material = VisibleHitboxes.GetMaterial("ShaderTransparent");
+            lineRenderer.material = new Material(Shader.Find("Hidden/Internal-Colored"));
             var color1 = new Color(color.r, color.g, color.b, Settings.GetTransparency());
             lineRenderer.SetColors(color1, color1);
             lineRenderer.SetWidth(0.5f, 0.5f);
