@@ -31,18 +31,15 @@ public class VisibleHitboxes : BloonsTD6Mod
     private readonly List<HitboxManager> managers;
     
     private readonly TowerHitboxManager towerManager;
-    private readonly BloonHitboxManager bloonManager;
     private readonly MapHitboxManager mapManager;
 
     public VisibleHitboxes()
     {
         towerManager = new(Settings.ShowTowerHitboxes);
-        bloonManager = new(Settings.ShowBloonHitboxes);
         mapManager = new(Settings.ShowMapOverlay);
         managers = new List<HitboxManager>
         {
             towerManager,
-            bloonManager,
             mapManager
         };
     }
@@ -105,15 +102,11 @@ public class VisibleHitboxes : BloonsTD6Mod
         {
             bool newState = !Settings.IsEverythingEnabled();
             Settings.ShowTowerHitboxes.SetValue(newState);
-            Settings.ShowBloonHitboxes.SetValue(newState);
             Settings.ShowMapOverlay.SetValue(newState);
         }
 
         if (Settings.ToggleTowerHitboxes.JustPressed())
             Settings.ShowTowerHitboxes.SetValue(!Settings.ShowTowerHitboxes);
-
-        if (Settings.ToggleBloonHitboxes.JustPressed())
-            Settings.ShowBloonHitboxes.SetValue(!Settings.ShowBloonHitboxes);
 
         if (Settings.ToggleMapOverlay.JustPressed())
             Settings.ShowMapOverlay.SetValue(!Settings.ShowMapOverlay);
