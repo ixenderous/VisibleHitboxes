@@ -23,7 +23,10 @@ public class VisibleHitboxes : BloonsTD6Mod
     private bool isInGame;
     private bool wasPlacing;
     private bool forceHitboxes = false;
+    private int scheduledToggle = -1;
 
+    private const int TOGGLE_ON_DELAY = 2;
+    
     private readonly List<HitboxManager> managers;
     private readonly TowerHitboxManager towerManager;
     private readonly MapHitboxManager mapManager;
@@ -47,6 +50,7 @@ public class VisibleHitboxes : BloonsTD6Mod
         
         isInGame = true;
         wasPlacing = false;
+        scheduledToggle = -1;
 
         Camera cam = InGame.instance.sceneCamera;
         if (cam != null)
@@ -83,19 +87,32 @@ public class VisibleHitboxes : BloonsTD6Mod
         if (Settings.ForceHitboxesToggle.JustPressed())
         {
             forceHitboxes = !forceHitboxes;
-            
             ToggleMapRendering(!forceHitboxes); 
         }
         
         var inputManager = InGame.instance.InputManager;
         var isPlacing = inputManager.placementModel != null;
         
-        bool shouldBeActive = isPlacing || forceHitboxes;
+        scheduledToggle = Mathf.Max(scheduledToggle - 1, -1);
         
-        if (!forceHitboxes && (isPlacing != wasPlacing))
+        if (!forceHitboxes)
         {
-            ToggleMapRendering(!isPlacing);
+            if (scheduledToggle == 0 && !isPlacing)
+            {
+                ToggleMapRendering(true);
+                scheduledToggle = -1;
+            }
+            else if (!isPlacing && wasPlacing)
+            {
+                // Schedule a toggle to not flicker the map
+                scheduledToggle = TOGGLE_ON_DELAY;
+            }
+            else if (isPlacing && !wasPlacing) {
+                ToggleMapRendering(false);
+            }
         }
+        
+        bool shouldBeActive = isPlacing || forceHitboxes || scheduledToggle != -1;
         
         foreach (var manager in managers)
             manager.Update(shouldBeActive);
