@@ -43,7 +43,7 @@ namespace VisibleHitboxes.HitboxManagers
                 Hitboxes.TryAdd(towerId.ToString(), hitbox);
             }
 
-            var inputManager = InGame.instance.InputManager;
+            var inputManager = InGame.instance.InputManagers.First();
             var placementDisplayList = inputManager.placementGraphics;
             var placementModel = inputManager.placementModel;
             var placementTowerId = inputManager.placementEntityId;

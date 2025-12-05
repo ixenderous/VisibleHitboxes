@@ -90,7 +90,7 @@ public class VisibleHitboxes : BloonsTD6Mod
             ToggleMapRendering(!forceHitboxes); 
         }
         
-        var inputManager = InGame.instance.InputManager;
+        var inputManager = InGame.instance.InputManagers.First();
         var isPlacing = inputManager.placementModel != null;
         
         scheduledToggle = Mathf.Max(scheduledToggle - 1, -1);
