@@ -8,7 +8,18 @@ namespace VisibleHitboxes
         // Tower colors
         public static readonly Color Tower = new(0.25f, 1f, 0f);
         public static readonly Color InvalidPosition = new(1f, 0f, 0f);
-        
+
+        // Projectile colors
+        public static readonly Color Projectile = new(0f, 1f, 1f);
+        public static readonly Color InvisibleProjectile = new(0f, 1f, 1f);
+        public static readonly Color ModifierProjectile = new(0f, 1f, 1f);
+
+        // Bloon colors
+        public static readonly Color Bloon = new(1f, 1f, 0f);
+
+        // Path colors
+        public static readonly Color Path = new(0.9f, 0.95f, 0.85f);
+
         // Area type colors
         public static readonly Color AreaTrack = new(1f, 0f, 0f);
         public static readonly Color AreaWater = new(0f, 0.8f, 1f);

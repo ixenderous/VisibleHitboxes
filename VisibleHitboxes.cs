@@ -10,6 +10,9 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using VisibleHitboxes;
 using VisibleHitboxes.HitboxManagers;
+using Il2CppAssets.Scripts.Simulation.Towers.Projectiles;
+using Il2CppAssets.Scripts.Simulation.Objects;
+using Il2CppAssets.Scripts.Models;
 
 [assembly:
     MelonInfo(typeof(VisibleHitboxes.VisibleHitboxes), ModHelperData.Name, ModHelperData.Version,
@@ -20,25 +23,39 @@ namespace VisibleHitboxes;
 
 public class VisibleHitboxes : BloonsTD6Mod
 {
+    private const int TOGGLE_ON_DELAY = 2;
+
     private bool isInGame;
     private bool wasPlacing;
     private bool forceHitboxes = false;
     private int scheduledToggle = -1;
 
-    private const int TOGGLE_ON_DELAY = 2;
+    private bool enableBloons = false;
+    private bool enableProjectiles = false;
+    private bool enablePaths = false;
     
     private readonly List<HitboxManager> managers;
     private readonly TowerHitboxManager towerManager;
     private readonly MapHitboxManager mapManager;
+    private readonly BloonHitboxManager bloonManager;
+    private readonly ProjectileHitboxManager projectileManager;
+    private readonly PathHitboxManager pathManager;
 
     public VisibleHitboxes()
     {
         towerManager = new();
         mapManager = new();
+        bloonManager = new();
+        projectileManager = new();
+        pathManager = new();
+
         managers = new List<HitboxManager>
         {
             towerManager,
-            mapManager
+            mapManager,
+            bloonManager,
+            projectileManager,
+            pathManager
         };
     }
 
@@ -51,6 +68,10 @@ public class VisibleHitboxes : BloonsTD6Mod
         isInGame = true;
         wasPlacing = false;
         scheduledToggle = -1;
+
+        enableBloons = false;
+        enableProjectiles = false;
+        enablePaths = false;
 
         Camera cam = InGame.instance.sceneCamera;
         if (cam != null)
@@ -69,6 +90,10 @@ public class VisibleHitboxes : BloonsTD6Mod
         isInGame = false;
         wasPlacing = false;
         forceHitboxes = false;
+
+        enableBloons = false;
+        enableProjectiles = false;
+        enablePaths = false;
         
         foreach (var manager in managers)
             manager.OnMatchEnd();
@@ -78,6 +103,11 @@ public class VisibleHitboxes : BloonsTD6Mod
     {
         base.OnTowerUpgraded(tower, upgradeName, newBaseTowerModel);
         towerManager.OnTowerUpgraded(tower);
+    }
+
+    public override void OnProjectileCreated(Projectile projectile, Entity entity, Model modelToUse)
+    {
+        projectileManager?.OnProjectileCreated(projectile, modelToUse);
     }
 
     public override void OnUpdate()
@@ -113,11 +143,29 @@ public class VisibleHitboxes : BloonsTD6Mod
         }
         
         bool shouldBeActive = isPlacing || forceHitboxes || scheduledToggle != -1;
-        
-        foreach (var manager in managers)
-            manager.Update(shouldBeActive);
+
+        //foreach (var manager in managers)
+        //    manager.Update(shouldBeActive);
+
+        towerManager.Update(shouldBeActive);
+        mapManager.Update(shouldBeActive);
 
         wasPlacing = isPlacing;
+
+        // handle toggle hotkeys
+        if (Settings.ToggleBloonHitboxes.JustPressed())
+            enableBloons = !enableBloons;
+
+        if (Settings.ToggleProjectileHitboxes.JustPressed())
+            enableProjectiles = !enableProjectiles;
+
+        if (Settings.TogglePathsOverlay.JustPressed())
+            enablePaths = !enablePaths;
+
+        // update managers
+        bloonManager.Update(enableBloons);
+        projectileManager.Update(enableProjectiles);
+        pathManager.Update(enablePaths);
     }
     
     static void ToggleMapRendering(bool enabled)
