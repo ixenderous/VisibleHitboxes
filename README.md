@@ -8,7 +8,7 @@
 
 ---
 
-Toggles map rendering and enables map and tower outlines when placing.
+Adds tower, map, path, bloon, and projectile hitboxes/overlays.
 
 Fork of https://github.com/TheMegax/HitboxMod
 
