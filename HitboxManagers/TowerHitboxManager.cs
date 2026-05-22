@@ -2,6 +2,7 @@
 using Il2CppAssets.Scripts.Models.Towers.Behaviors;
 using Il2CppAssets.Scripts.Simulation.Towers;
 using Il2CppAssets.Scripts.Unity.UI_New.InGame;
+using Il2CppAssets.Scripts.Models.Map;
 using System.Collections.Generic;
 using UnityEngine;
 using Object = Il2CppSystem.Object;
@@ -27,6 +28,7 @@ namespace VisibleHitboxes.HitboxManagers
                 return;
             }
 
+            #region placed towers
             var activeIdentifiers = new List<string>();
 
             foreach (var tower in InGame.Bridge.GetAllTowers().ToList())
@@ -42,7 +44,9 @@ namespace VisibleHitboxes.HitboxManagers
                 activeIdentifiers.Add(towerId.ToString());
                 Hitboxes.TryAdd(towerId.ToString(), hitbox);
             }
+            #endregion
 
+            #region held tower
             var inputManager = InGame.instance.InputManagers.First();
             var placementDisplayList = inputManager.placementGraphics;
             var placementModel = inputManager.placementModel;
@@ -56,7 +60,7 @@ namespace VisibleHitboxes.HitboxManagers
                 var footprint = placementModel.footprint;
                 var inputId = InGame.Bridge.GetInputId();
                 var canPlace = InGame.Bridge.CanPlaceTowerAt(towerPos, placementModel, inputId, placementTowerId);
-                var color = canPlace ? HitboxColors.Tower : HitboxColors.InvalidPosition;
+                var color = canPlace ? GetAreaColor(towerPos.x, towerPos.y) : HitboxColors.InvalidPosition;
 
                 var hitbox = CreateTowerHitbox(simDisplay, color, footprint, ID_HELD_TOWER_HITBOX.ToString());
                 if (hitbox != null)
@@ -66,6 +70,7 @@ namespace VisibleHitboxes.HitboxManagers
                     UpdateHitbox(hitbox, simDisplay.position, color);
                 }
             }
+            #endregion
 
             CleanUpHitboxes(activeIdentifiers);
         }
@@ -117,6 +122,14 @@ namespace VisibleHitboxes.HitboxManagers
                 
                 return circle;
             }
+        }
+
+        private Color GetAreaColor(float x, float y)
+        {
+            var pos = new Il2CppAssets.Scripts.Simulation.SMath.Vector2(x, y);
+            var area = InGame.instance.GetMap().GetAreaAtPoint(pos);
+
+            return HitboxColors.GetAreaColor(area.areaModel.type);
         }
 
         public void OnTowerUpgraded(Tower tower)
