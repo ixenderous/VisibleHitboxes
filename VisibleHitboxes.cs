@@ -27,7 +27,7 @@ public class VisibleHitboxes : BloonsTD6Mod
 
     private bool isInGame;
     private bool wasPlacing;
-    private bool forceHitboxes = false;
+    private bool forcePlacementMode = false;
     private int scheduledToggle = -1;
 
     private bool enableBloons = false;
@@ -89,7 +89,7 @@ public class VisibleHitboxes : BloonsTD6Mod
         base.OnMatchEnd();
         isInGame = false;
         wasPlacing = false;
-        forceHitboxes = false;
+        forcePlacementMode = false;
 
         enableBloons = false;
         enableProjectiles = false;
@@ -113,46 +113,72 @@ public class VisibleHitboxes : BloonsTD6Mod
     public override void OnUpdate()
     {
         if (!isInGame || InGame.instance == null) return;
-        
-        if (Settings.ForceHitboxesToggle.JustPressed())
+
+        // --- Force placement mode hotkey ---
+        // Toggling this immediately syncs map rendering to the new state.
+        if (Settings.ForcePlacementMode.JustPressed())
         {
-            forceHitboxes = !forceHitboxes;
-            ToggleMapRendering(!forceHitboxes); 
+            forcePlacementMode = !forcePlacementMode;
+            ToggleMapRendering(!forcePlacementMode);
         }
-        
+
         var inputManager = InGame.instance.InputManagers.First();
         var isPlacing = inputManager.placementModel != null;
-        
+
+        // Tick the scheduled-toggle countdown down, clamped at -1 (idle).
+        // The countdown is used to introduce a short delay before re-enabling
+        // map rendering when the player stops placing, so that back-to-back
+        // placements don't cause a visible flicker.
         scheduledToggle = Mathf.Max(scheduledToggle - 1, -1);
-        
-        if (!forceHitboxes)
+
+        // --- Auto placement mode (only when not force-overridden) ---
+        // If AutoToggleWhenPlacing is disabled, cancel any in-progress countdown
+        // and skip this entire block so placement state never drives map rendering.
+        if (!forcePlacementMode)
         {
-            if (scheduledToggle == 0 && !isPlacing)
+            if (!Settings.AutoTogglePlacementMode)
             {
-                ToggleMapRendering(true);
+                // Discard any scheduled toggle that was queued while the setting
+                // was previously enabled; we don't want a stale countdown to
+                // re-enable map rendering unexpectedly.
                 scheduledToggle = -1;
             }
-            else if (!isPlacing && wasPlacing)
+            else
             {
-                // Schedule a toggle to not flicker the map
-                scheduledToggle = TOGGLE_ON_DELAY;
-            }
-            else if (isPlacing && !wasPlacing) {
-                ToggleMapRendering(false);
+                // Countdown reached zero and the player is no longer placing:
+                // safe to re-enable map rendering now.
+                if (scheduledToggle == 0 && !isPlacing)
+                {
+                    ToggleMapRendering(true);
+                    scheduledToggle = -1;
+                }
+                // Player just stopped placing: start the flicker-prevention delay
+                // instead of immediately re-enabling map rendering.
+                else if (!isPlacing && wasPlacing)
+                {
+                    scheduledToggle = TOGGLE_ON_DELAY;
+                }
+                // Player just started placing: immediately disable map rendering.
+                else if (isPlacing && !wasPlacing)
+                {
+                    ToggleMapRendering(false);
+                }
             }
         }
-        
-        bool shouldBeActive = isPlacing || forceHitboxes || scheduledToggle != -1;
 
-        //foreach (var manager in managers)
-        //    manager.Update(shouldBeActive);
+        // Placement mode is "active" if any of these are true:
+        //   - The player is currently placing a tower (and auto-toggle is on)
+        //   - Force mode is on
+        //   - We're in the flicker-prevention countdown window
+        bool autoPlacing = Settings.AutoTogglePlacementMode && (isPlacing || scheduledToggle != -1);
+        bool shouldBeActive = autoPlacing || forcePlacementMode;
 
         towerManager.Update(shouldBeActive);
         mapManager.Update(shouldBeActive);
 
         wasPlacing = isPlacing;
 
-        // handle toggle hotkeys
+        // --- Debug overlay hotkeys ---
         if (Settings.ToggleBloonHitboxes.JustPressed())
             enableBloons = !enableBloons;
 
@@ -162,12 +188,12 @@ public class VisibleHitboxes : BloonsTD6Mod
         if (Settings.TogglePathsOverlay.JustPressed())
             enablePaths = !enablePaths;
 
-        // update managers
+        // --- Update remaining managers ---
         bloonManager.Update(enableBloons);
         projectileManager.Update(enableProjectiles);
         pathManager.Update(enablePaths);
     }
-    
+
     static void ToggleMapRendering(bool enabled)
     {
         var mapName = InGame.instance.GetMap().mapModel.mapName;

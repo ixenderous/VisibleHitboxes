@@ -7,17 +7,22 @@ namespace VisibleHitboxes
 {
     public class Settings : ModSettings
     {
+        public static readonly ModSettingBool AutoTogglePlacementMode = new(true)
+        {
+            description = "Automatically disable map rendering and enable tower and map hitbox overlays when placing towers"
+        };
+
         public static readonly ModSettingCategory Hotkeys = new("Hotkeys") { collapsed = true };
         // public static readonly ModSettingCategory Toggles = new("Toggles") { collapsed = true};
 
         #region Hotkeys
-        public static readonly ModSettingHotkey ForceHitboxesToggle = new(KeyCode.Backslash)
+        public static readonly ModSettingHotkey ForcePlacementMode = new(KeyCode.Backslash)
         {
             category = Hotkeys,
-            description = "Toggle for force hitbox rendering even when not placing anything."
+            description = "Toggle to disable map and enable map area and tower overlay rendering."
         };
 
-        public static readonly ModSettingHotkey ToggleBloonHitboxes = new(KeyCode.B, Il2CppAssets.Scripts.Unity.UI_New.InGame.HotkeyModifier.Shift)
+        public static readonly ModSettingHotkey ToggleBloonHitboxes = new(KeyCode.B, HotkeyModifier.Shift)
         {
             category = Hotkeys,
             displayName = "Toggle Bloon Hitboxes"
