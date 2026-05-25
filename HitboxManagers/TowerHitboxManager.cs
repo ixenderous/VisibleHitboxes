@@ -37,7 +37,10 @@ namespace VisibleHitboxes.HitboxManagers
                 if (simDisplay == null || !simDisplay.gameObject.active) continue;
 
                 var towerId = tower.Id.Id;
-                var hitbox = CreateTowerHitbox(simDisplay, HitboxColors.Tower, tower.Def.footprint, towerId.ToString());
+
+                var area = tower.GetTower().GetAreaTowerIsPlacedOn();
+                var color = area == null ? HitboxColors.InvalidPosition : GetTowerColor(true, area.areaModel.type);
+                var hitbox = CreateTowerHitbox(simDisplay, color, tower.Def.footprint, towerId.ToString());
 
                 if (hitbox == null) continue;
 
@@ -53,14 +56,15 @@ namespace VisibleHitboxes.HitboxManagers
             var placementTowerId = inputManager.placementEntityId;
             var towerPos = inputManager.entityPositionWorld;
 
-            if(placementModel != null && placementDisplayList.Count > 0)
+            if (placementModel != null && placementDisplayList.Count > 0)
             {
                 var placementDisplay= placementDisplayList.First();
                 var simDisplay = placementDisplay.gameObject.transform;
                 var footprint = placementModel.footprint;
                 var inputId = InGame.Bridge.GetInputId();
+
                 var canPlace = InGame.Bridge.CanPlaceTowerAt(towerPos, placementModel, inputId, placementTowerId);
-                var color = canPlace ? GetAreaColor(towerPos.x, towerPos.y) : HitboxColors.InvalidPosition;
+                var color = GetTowerColor(canPlace, towerPos.x, towerPos.y);
 
                 var hitbox = CreateTowerHitbox(simDisplay, color, footprint, ID_HELD_TOWER_HITBOX.ToString());
                 if (hitbox != null)
@@ -124,12 +128,24 @@ namespace VisibleHitboxes.HitboxManagers
             }
         }
 
-        private Color GetAreaColor(float x, float y)
+        private Color GetTowerColor(bool canPlace, float x, float y)
         {
             var pos = new Il2CppAssets.Scripts.Simulation.SMath.Vector2(x, y);
             var area = InGame.instance.GetMap().GetAreaAtPoint(pos);
+            bool notInWater = area == null || area.areaModel.type != AreaType.water;
 
-            return HitboxColors.GetAreaColor(area.areaModel.type);
+            return canPlace ?
+                (notInWater ? HitboxColors.Tower : HitboxColors.TowerWater) :
+                (notInWater ? HitboxColors.InvalidPosition : HitboxColors.InvalidPositionWater);
+        }
+
+        private Color GetTowerColor(bool canPlace, AreaType areaType)
+        {
+            bool notInWater = areaType != AreaType.water;
+
+            return canPlace ?
+                (notInWater ? HitboxColors.Tower : HitboxColors.TowerWater) :
+                (notInWater ? HitboxColors.InvalidPosition : HitboxColors.InvalidPositionWater);
         }
 
         public void OnTowerUpgraded(Tower tower)

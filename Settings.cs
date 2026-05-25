@@ -13,7 +13,6 @@ namespace VisibleHitboxes
         };
 
         public static readonly ModSettingCategory Hotkeys = new("Hotkeys") { collapsed = true };
-        // public static readonly ModSettingCategory Toggles = new("Toggles") { collapsed = true};
 
         #region Hotkeys
         public static readonly ModSettingHotkey ForcePlacementMode = new(KeyCode.Backslash)
@@ -22,22 +21,34 @@ namespace VisibleHitboxes
             description = "Toggle to disable map and enable map area and tower overlay rendering."
         };
 
-        public static readonly ModSettingHotkey ToggleBloonHitboxes = new(KeyCode.B, HotkeyModifier.Shift)
+        public static readonly ModSettingHotkey ToggleMapRendering = new(KeyCode.W, HotkeyModifier.Shift)
         {
             category = Hotkeys,
-            displayName = "Toggle Bloon Hitboxes"
         };
 
-        public static readonly ModSettingHotkey ToggleProjectileHitboxes = new(KeyCode.P, HotkeyModifier.Shift)
+        public static readonly ModSettingHotkey ToggleTowerOverlay = new(KeyCode.T, HotkeyModifier.Shift)
         {
             category = Hotkeys,
-            displayName = "Toggle Projectile Hitboxes"
         };
 
-        public static readonly ModSettingHotkey TogglePathsOverlay = new(KeyCode.L, HotkeyModifier.Shift)
+        public static readonly ModSettingHotkey ToggleMapOverlay = new(KeyCode.M, HotkeyModifier.Shift)
         {
             category = Hotkeys,
-            displayName = "Toggle path Overlay"
+        };
+
+        public static readonly ModSettingHotkey ToggleBloonOverlay = new(KeyCode.B, HotkeyModifier.Shift)
+        {
+            category = Hotkeys,
+        };
+
+        public static readonly ModSettingHotkey ToggleProjectileOverlay = new(KeyCode.P, HotkeyModifier.Shift)
+        {
+            category = Hotkeys,
+        };
+
+        public static readonly ModSettingHotkey TogglePathOverlay = new(KeyCode.L, HotkeyModifier.Shift)
+        {
+            category = Hotkeys,
         };
         #endregion
     }
